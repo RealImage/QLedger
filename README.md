@@ -38,7 +38,7 @@ All accounts and transactions are identified by a string identifier, which also 
 }
 ```
 
-#### Roadmap
+### Roadmap
 
 #### Metadata for Querying and Reports
 Both accounts and transactions can be tagged with an arbitrary number of key-value pairs. There is no enforcement as to the nature of the keys or values, but simple ASCII strings are recommended for easy querying and reporting. 
