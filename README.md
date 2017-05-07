@@ -3,7 +3,7 @@ Systems that manage money do so by managing its movement - by tracking where it 
 
 The there are two primitives in the system: **accounts** and **transactions**. Money moves between accounts by means of a transaction. 
 
-A **transaction** may have multiple lines - each line represents the change (*delta*) of money in one account. A valid transaction has a total delta of 0 - no money is created or destroyed, and all money moved out of any account(s) has moved in to other account(s). QLedger validates all transactions made via the API with a zero delta check.
+A **transaction** may have multiple *lines* - each line represents the change (*delta*) of money in one account. A valid transaction has a total delta of 0 - no money is created or destroyed, and all money moved out of any account(s) has moved in to other account(s). QLedger validates all transactions made via the API with a zero delta check.
 
 > Phrased another way, the law of conversation of money is formalized by the rules of double entry bookkeeping - money debited from any account must be credited to another account (and vice versa), implying that all transactions must have at least two entries (double entry). QLedger makes it easy to follow these rules. 
 
