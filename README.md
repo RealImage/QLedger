@@ -40,6 +40,7 @@ All accounts and transactions are identified by a string identifier, which also 
 
 #### Roadmap
 
+#### Metadata for Querying and Reports
 Both accounts and transactions can be tagged with an arbitrary number of key-value pairs. There is no enforcement as to the nature of the keys or values, but simple ASCII strings are recommended for easy querying and reporting. 
 
 > When encoding information like dates into strings in the key-value pairs, they can be made sortable (and therefore queryable by range) by using placing the most significant bits first - like 2017-05-07T11:35:14Z for dates ([ISO 8601](https://en.wikipedia.org/wiki/ISO_8601)). While numbers are unlikely candidates for key-value storage, encoding them to be sortable / range-queryable without space-inefficient zero pading is [possible, but difficult](http://stackoverflow.com/questions/28413947/space-efficient-way-to-encode-numbers-as-sortable-strings).
