@@ -1,5 +1,7 @@
-# ledger
-A general ledger, suitable for managing any system with financial events
+# QLedger
+Systems that manage money do so by managing it's movement - by tracking where it moved from, where it moved to, how much moved and why. QLedger is a service that provides APIs to manage the structured movement of money. 
+
+The there are two primitives in the system: **accounts** and **transactions**. 
 
 #Accounts
   - id
