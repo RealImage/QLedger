@@ -34,6 +34,7 @@ The API is as follows
   ...
 }
 ```
+> Transactions with a total delta not equal to zero will result in a `400 BAD REQUEST` error.
 
 #### GET `/v1/accounts?id=alice`
 ```
