@@ -15,30 +15,31 @@ Both accounts and transactions can be tagged with an arbitrary number of key-val
 
 All accounts and transactions are identified by a string identifier, which also acts an idempotency and an immutability key. Transactions once sent to the ledger cannot be changed - any 'modification' or reversal requires a new transaction. The safe recovery mechanism for all network errors is also a simple retry - as long as the identifier does not change the transaction will never be indavertently duplicated. 
 
-#Accounts
-  - id
-  - data
-  - tags[]
-    - key
-    - value
-Accounts can be created on the fly 
+The API is as follows
 
-#Transactions
-  - id
-  - timestamp
-  - data
-  - lines[]
-    - account_id
-    - delta
-  - tags[]
-    - key
-    - value
-   
-   
-To preserve double entry rules, the sum(delta) in any transaction must always = zero.
+#### POST `/v1/transactions`
+```
+{
+  "id": "abcd1234",
+  "lines": [
+    {
+      "account": "alice",
+      "delta": -100
+    },
+    {
+      "account": "bob",
+      "delta": 100
+    }
+  ],
+  ...
+}
+```
 
-The `timestamp` and `lines[]` of a transaction are always immutable - if transaction needs to be reversed a new reversal transaction can be inserted. 
+#### GET `/v1/accounts?id=alice`
+```
+{
+  "id": "alice",
+  "balance": -100
+}
+```
 
-The `tags[]` of both accounts and transactions are mutable to reflect changing reporting requirements. And audit trail will be created for every overwrite. 
-
-All calls are idempotent. The immutable properties of transactions will never be overwritten on multiple calls. Tags may be overwritten with an audit trail. 
