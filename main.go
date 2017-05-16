@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/gorilla/context"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -23,5 +22,5 @@ func main() {
 	router.GET("/v1/accounts", GetAccountInformation)
 
 	log.Println("PORT: 7000")
-	log.Fatal(http.ListenAndServe(":7000", context.ClearHandler(router)))
+	log.Fatal(http.ListenAndServe(":7000", router))
 }

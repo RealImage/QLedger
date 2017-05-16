@@ -4,11 +4,6 @@
 	"GodepVersion": "v79",
 	"Deps": [
 		{
-			"ImportPath": "github.com/gorilla/context",
-			"Comment": "v1.1-7-g08b5f42",
-			"Rev": "08b5f424b9271eedf6f9f0ce86cb9396ed337a42"
-		},
-		{
 			"ImportPath": "github.com/julienschmidt/httprouter",
 			"Comment": "v1.1-51-g975b5c4",
 			"Rev": "975b5c4c7c21c0e3d2764200bf2aa8e34657ae6e"
