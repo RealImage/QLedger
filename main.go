@@ -1,26 +1,26 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 
+	"github.com/RealImage/QLedger/controllers"
+	"github.com/RealImage/QLedger/database"
 	"github.com/julienschmidt/httprouter"
 )
 
-func AddTransaction(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	fmt.Fprint(w, "Add Transaction - WIP!\n")
-}
-
-func GetAccountInformation(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	fmt.Fprint(w, "Get Account Information - WIP!\n")
-}
-
 func main() {
 	router := httprouter.New()
-	router.POST("/v1/transactions", AddTransaction)
-	router.GET("/v1/accounts", GetAccountInformation)
+	router.GET("/v1/accounts", controllers.GetAccountsInfo)
 
-	log.Println("PORT: 7000")
-	log.Fatal(http.ListenAndServe(":7000", router))
+	port := "7000" //TODO: Read from config
+	log.Println("Running server on port:", port)
+	log.Fatal(http.ListenAndServe(":"+port, router))
+
+	defer func() {
+		database.Cleanup()
+		if r := recover(); r != nil {
+			log.Println("Server exited!!!", r)
+		}
+	}()
 }
