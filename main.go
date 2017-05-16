@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/RealImage/QLedger/internal/utils/config"
 	"github.com/gorilla/context"
 	"github.com/julienschmidt/httprouter"
 )
@@ -23,6 +22,6 @@ func main() {
 	router.POST("/v1/transactions", AddTransaction)
 	router.GET("/v1/accounts", GetAccountInformation)
 
-	log.Println("PORT: ", config.PORT)
-	log.Fatal(http.ListenAndServe(":"+config.PORT, context.ClearHandler(router)))
+	log.Println("PORT: 7000")
+	log.Fatal(http.ListenAndServe(":7000", context.ClearHandler(router)))
 }
