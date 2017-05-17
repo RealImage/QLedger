@@ -4,39 +4,34 @@ import (
 	"log"
 	"os"
 	"sync"
+	"database/sql"
 
-	"gopkg.in/jackc/pgx.v2"
+	_ "github.com/lib/pq"
 )
 
-var ConnPool *pgx.ConnPool
+var Conn *sql.DB
 var once sync.Once
 
 func init() {
-	if ConnPool == nil {
+	if Conn == nil {
 		once.Do(func() {
-			connConfig, err := pgx.ParseURI(os.Getenv("DATABASE_URL"))
-			if err != nil {
-				log.Fatal("Invalid Database URL:", err)
-				panic(err)
-				return
-			}
-			poolConfig := pgx.ConnPoolConfig{
-				ConnConfig:     connConfig,
-				MaxConnections: 10, //TODO: Read from config
-			}
-			ConnPool, err = pgx.NewConnPool(poolConfig)
+			var err error
+			Conn, err = sql.Open("postgres", os.Getenv("DATABASE_URL"))
 			if err != nil {
 				log.Fatal("Unable to connect to Database:", err)
 				panic(err)
 				return
 			}
-			log.Println("Successfully established connection to database:", poolConfig.Database)
+			log.Println("Successfully established connection to database.")
 		})
 	}
 }
 
 func Cleanup() {
-	if ConnPool == nil {
-		ConnPool.Close()
+	if Conn == nil {
+		err := Conn.Close()
+		if err != nil {
+			log.Fatal("Error closing db connection:", err)
+		}
 	}
 }

@@ -12,7 +12,7 @@ type Account struct {
 }
 
 func GetAccounts() (accounts []*Account) {
-	rows, err := database.ConnPool.Query("SELECT * FROM current_balances")
+	rows, err := database.Conn.Query("SELECT * FROM current_balances")
 	if err != nil {
 		log.Fatal(err)
 	}
