@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"log"
 	"net/http"
 	"os"
@@ -11,10 +10,11 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-func ContextMiddleware(appContext *ledgerContext.AppContext, handlerFunc httprouter.Handle) httprouter.Handle {
-	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		ctx := context.WithValue(r.Context(), "app", appContext)
-		handlerFunc(w, r.WithContext(ctx), ps)
+type Handler func(http.ResponseWriter, *http.Request, *ledgerContext.AppContext)
+
+func ContextMiddleware(handler Handler, context *ledgerContext.AppContext) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		handler(w, r, context)
 	}
 }
 
@@ -23,7 +23,7 @@ func main() {
 	appContext.Initialize()
 
 	router := httprouter.New()
-	router.GET("/v1/accounts", ContextMiddleware(appContext, controllers.GetAccountsInfo))
+	router.HandlerFunc("GET", "/v1/accounts", ContextMiddleware(controllers.GetAccountsInfo, appContext))
 
 	port := "7000"
 	if lp := os.Getenv("PORT"); lp != "" {

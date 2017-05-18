@@ -8,12 +8,10 @@ import (
 
 	ledgerContext "github.com/RealImage/QLedger/context"
 	"github.com/RealImage/QLedger/models"
-	"github.com/julienschmidt/httprouter"
 )
 
-func GetAccountsInfo(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	app := r.Context().Value("app").(*ledgerContext.AppContext)
-	accountsDB := models.Account{DB: app.DB}
+func GetAccountsInfo(w http.ResponseWriter, r *http.Request, context *ledgerContext.AppContext) {
+	accountsDB := models.Account{DB: context.DB}
 
 	id := r.FormValue("id")
 	account := accountsDB.GetByID(id)
