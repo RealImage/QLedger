@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os"
 
 	ledgerContext "github.com/RealImage/QLedger/context"
 	"github.com/RealImage/QLedger/controllers"
@@ -24,7 +25,11 @@ func main() {
 	router := httprouter.New()
 	router.GET("/v1/accounts", ContextMiddleware(appContext, controllers.GetAccountsInfo))
 
-	port := "7000" //TODO: Read from config
+	port := "7000"
+	if lp := os.Getenv("QLEDGER_PORT"); lp != "" {
+		port = lp
+	}
+
 	log.Println("Running server on port:", port)
 	log.Fatal(http.ListenAndServe(":"+port, router))
 
