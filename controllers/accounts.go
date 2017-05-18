@@ -14,7 +14,7 @@ import (
 func GetAccountsInfo(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	app := r.Context().Value("app").(*ledgerContext.AppContext)
 	accountsDB := models.Account{DB: app.DB}
-	
+
 	id := r.FormValue("id")
 	account := accountsDB.GetByID(id)
 	data, err := json.Marshal(account)
