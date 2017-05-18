@@ -26,10 +26,9 @@ func main() {
 	router.GET("/v1/accounts", ContextMiddleware(appContext, controllers.GetAccountsInfo))
 
 	port := "7000"
-	if lp := os.Getenv("QLEDGER_PORT"); lp != "" {
+	if lp := os.Getenv("PORT"); lp != "" {
 		port = lp
 	}
-
 	log.Println("Running server on port:", port)
 	log.Fatal(http.ListenAndServe(":"+port, router))
 
