@@ -1,0 +1,22 @@
+{
+	"ImportPath": "github.com/RealImage/QLedger",
+	"GoVersion": "go1.8",
+	"GodepVersion": "v79",
+	"Deps": [
+		{
+			"ImportPath": "github.com/julienschmidt/httprouter",
+			"Comment": "v1.1-51-g975b5c4",
+			"Rev": "975b5c4c7c21c0e3d2764200bf2aa8e34657ae6e"
+		},
+		{
+			"ImportPath": "github.com/lib/pq",
+			"Comment": "go1.0-cutoff-166-g2704adc",
+			"Rev": "2704adc878c21e1329f46f6e56a1c387d788ff94"
+		},
+		{
+			"ImportPath": "github.com/lib/pq/oid",
+			"Comment": "go1.0-cutoff-166-g2704adc",
+			"Rev": "2704adc878c21e1329f46f6e56a1c387d788ff94"
+		}
+	]
+}
