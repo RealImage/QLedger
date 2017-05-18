@@ -22,3 +22,15 @@ _testmain.go
 *.exe
 *.test
 *.prof
+
+
+out/
+bin/
+*.iml
+*.log
+*.log.*
+.DS_Store
+QLedger
+.rvmrc
+dump.rdb
+*.csv
