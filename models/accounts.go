@@ -12,16 +12,16 @@ type Account struct {
 }
 
 func (account *Account) GetByID(id string) (at *Account) {
-	var balance int
-	err := account.DB.QueryRow("SELECT balance FROM current_balances where account_id=$1", &id).Scan(&balance)
+	at = &Account{Id: id}
+
+	err := account.DB.QueryRow("SELECT balance FROM current_balances where account_id=$1", &id).Scan(&at.Balance)
 	
 	switch {
 		case err == sql.ErrNoRows:
-        at = &Account{Id: id, Balance: 0}
+        at.Balance = 0
 		case err != nil:
 		    log.Fatal(err)
-		default:
-				at = &Account{Id: id, Balance: balance}
 	}
+	
 	return
 }
