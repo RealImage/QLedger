@@ -11,12 +11,13 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-func GetAccountsInfo(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+func GetAccountsInfo(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	app := r.Context().Value("app").(*ledgerContext.AppContext)
 	accountsDB := models.Account{DB: app.DB}
-
-	accounts := accountsDB.GetByID()
-	data, err := json.Marshal(accounts)
+	
+	id := r.FormValue("id")
+	account := accountsDB.GetByID(id)
+	data, err := json.Marshal(account)
 	if err != nil {
 		log.Fatal(err)
 	}

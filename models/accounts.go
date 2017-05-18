@@ -11,20 +11,17 @@ type Account struct {
 	Balance int     `json:"balance"`
 }
 
-func (account *Account) GetByID() (accounts []*Account) {
-	//TODO: Get a single account by ID
-	rows, err := account.DB.Query("SELECT * FROM current_balances")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		err := rows.Scan(&account.Id, &account.Balance)
-		if err != nil {
-			log.Fatal(err)
-		}
-		accounts = append(accounts, account)
+func (account *Account) GetByID(id string) (at *Account) {
+	var balance int
+	err := account.DB.QueryRow("SELECT balance FROM current_balances where account_id=$1", &id).Scan(&balance)
+	
+	switch {
+		case err == sql.ErrNoRows:
+        at = &Account{Id: id, Balance: 0}
+		case err != nil:
+		    log.Fatal(err)
+		default:
+				at = &Account{Id: id, Balance: balance}
 	}
 	return
 }
