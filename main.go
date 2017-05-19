@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"log"
 	"net/http"
 	"os"
@@ -8,6 +9,7 @@ import (
 	ledgerContext "github.com/RealImage/QLedger/context"
 	"github.com/RealImage/QLedger/controllers"
 	"github.com/julienschmidt/httprouter"
+	_ "github.com/lib/pq"
 )
 
 type Handler func(http.ResponseWriter, *http.Request, *ledgerContext.AppContext)
@@ -19,8 +21,12 @@ func ContextMiddleware(handler Handler, context *ledgerContext.AppContext) http.
 }
 
 func main() {
-	appContext := &ledgerContext.AppContext{}
-	appContext.Initialize()
+	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
+	if err != nil {
+		log.Panic("Unable to connect to Database:", err)
+	}
+	log.Println("Successfully established connection to database.")
+	appContext := &ledgerContext.AppContext{DB: db}
 
 	router := httprouter.New()
 	router.HandlerFunc("GET", "/v1/accounts", ContextMiddleware(controllers.GetAccountsInfo, appContext))
@@ -33,7 +39,6 @@ func main() {
 	log.Fatal(http.ListenAndServe(":"+port, router))
 
 	defer func() {
-		appContext.Cleanup()
 		if r := recover(); r != nil {
 			log.Println("Server exited!!!", r)
 		}
