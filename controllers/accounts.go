@@ -10,7 +10,7 @@ import (
 	"github.com/RealImage/QLedger/models"
 )
 
-func GetAccountsInfo(w http.ResponseWriter, r *http.Request, context *ledgerContext.AppContext) {
+func GetAccountInfo(w http.ResponseWriter, r *http.Request, context *ledgerContext.AppContext) {
 	accountsDB := models.Account{DB: context.DB}
 
 	id := r.FormValue("id")
