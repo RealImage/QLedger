@@ -32,7 +32,9 @@ type MockAccount struct {
 }
 
 func (as *AccountsSuite) SetupTest() {
-	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
+	databaseURL := os.Getenv("TEST_DATABASE_URL")
+	assert.NotEmpty(as.T(), databaseURL)
+	db, err := sql.Open("postgres", databaseURL)
 	if err != nil {
 		log.Panic("Unable to connect to Database:", err)
 	}
@@ -40,7 +42,7 @@ func (as *AccountsSuite) SetupTest() {
 	as.context = &ledgerContext.AppContext{DB: db}
 }
 
-func (as *AccountsSuite) TestValidAccount() {
+func (as *AccountsSuite) TestAccountsInfoAPI() {
 	t := as.T()
 	rr := httptest.NewRecorder()
 
@@ -61,31 +63,6 @@ func (as *AccountsSuite) TestValidAccount() {
 	}
 	// test valid id
 	assert.Equal(t, account.Id, "100", "Invalid account ID")
-	// test valid balance
-	assert.Equal(t, account.Balance, 5, "Invalid account balance")
-}
-
-func (as *AccountsSuite) TestInvalidAccount() {
-	t := as.T()
-	rr := httptest.NewRecorder()
-
-	handler := middlewares.ContextMiddleware(GetAccountInfo, as.context)
-	req, err := http.NewRequest("GET", ACCOUNTS_INFO_API+"?id=101", nil)
-	if err != nil {
-		as.T().Fatal(err)
-	}
-	handler.ServeHTTP(rr, req)
-
-	account := MockAccount{}
-	// test valid status code
-	assert.Equal(t, rr.Code, 200, "Invalid response code")
-	// test valid json
-	err = json.Unmarshal(rr.Body.Bytes(), &account)
-	if err != nil {
-		t.Errorf("Invalid json response: %v", rr.Body.String())
-	}
-	// test valid id
-	assert.Equal(t, account.Id, "101", "Invalid account ID")
 	// test valid balance
 	assert.Equal(t, account.Balance, 0, "Invalid account balance")
 }
