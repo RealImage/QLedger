@@ -31,7 +31,7 @@ func (as *AccountsSuite) SetupTest() {
 func (as *AccountsSuite) TestAccountsInfoAPI() {
 	t := as.T()
 
-	accountsDB := Account{DB: as.db}
+	accountsDB := AccountDB{DB: as.db}
 	account := accountsDB.GetByID("100")
 	// test valid id
 	assert.Equal(t, account.Id, "100", "Invalid account ID")

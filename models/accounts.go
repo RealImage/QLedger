@@ -6,22 +6,24 @@ import (
 )
 
 type Account struct {
-	DB      *sql.DB `json:"-"`
-	Id      string  `json:"id"`
-	Balance int     `json:"balance"`
+	Id      string `json:"id"`
+	Balance int    `json:"balance"`
 }
 
-func (account *Account) GetByID(id string) (at *Account) {
-	at = &Account{Id: id}
+type AccountDB struct {
+	DB *sql.DB `json:"-"`
+}
 
-	err := account.DB.QueryRow("SELECT balance FROM current_balances WHERE account_id=$1", &id).Scan(&at.Balance)
+func (adb *AccountDB) GetByID(id string) *Account {
+	account := &Account{Id: id}
 
+	err := adb.DB.QueryRow("SELECT balance FROM current_balances WHERE account_id=$1", &id).Scan(&account.Balance)
 	switch {
 	case err == sql.ErrNoRows:
-		at.Balance = 0
+		account.Balance = 0
 	case err != nil:
 		log.Fatal(err)
 	}
 
-	return
+	return account
 }

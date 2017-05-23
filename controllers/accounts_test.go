@@ -11,6 +11,7 @@ import (
 
 	ledgerContext "github.com/RealImage/QLedger/context"
 	"github.com/RealImage/QLedger/middlewares"
+	"github.com/RealImage/QLedger/models"
 
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
@@ -24,11 +25,6 @@ var (
 type AccountsSuite struct {
 	suite.Suite
 	context *ledgerContext.AppContext
-}
-
-type MockAccount struct {
-	Id      string `json:"id"`
-	Balance int    `json:"balance"`
 }
 
 func (as *AccountsSuite) SetupTest() {
@@ -53,7 +49,7 @@ func (as *AccountsSuite) TestAccountsInfoAPI() {
 	}
 	handler.ServeHTTP(rr, req)
 
-	account := MockAccount{}
+	account := models.Account{}
 	// test valid status code
 	assert.Equal(t, rr.Code, 200, "Invalid response code")
 	// test valid json

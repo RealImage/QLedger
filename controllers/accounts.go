@@ -11,7 +11,7 @@ import (
 )
 
 func GetAccountInfo(w http.ResponseWriter, r *http.Request, context *ledgerContext.AppContext) {
-	accountsDB := models.Account{DB: context.DB}
+	accountsDB := models.AccountDB{DB: context.DB}
 
 	id := r.FormValue("id")
 	account := accountsDB.GetByID(id)
