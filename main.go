@@ -30,6 +30,7 @@ func main() {
 
 	router := httprouter.New()
 	router.HandlerFunc("GET", "/v1/accounts", ContextMiddleware(controllers.GetAccountsInfo, appContext))
+	router.HandlerFunc("POST", "/v1/transactions", ContextMiddleware(controllers.MakeTransaction, appContext))
 
 	port := "7000"
 	if lp := os.Getenv("PORT"); lp != "" {
