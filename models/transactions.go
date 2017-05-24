@@ -67,25 +67,16 @@ func (tdb *TransactionDB) DoTransaction(t *Transaction) bool {
 
 	// Accounts do not need to be predefined
 	// they are called into existence when they are first used.
-	accStmt, err := txn.Prepare(`INSERT INTO accounts (id) VALUES ($1)`)
+	accStmt, err := txn.Prepare(`INSERT INTO accounts (id) VALUES ($1) ON CONFLICT (id) DO NOTHING`)
 	if err != nil {
 		log.Println("Error preparing statement of accounts:", err)
 		return false
 	}
 	for _, line := range t.Lines {
-		var exists bool
-		err = txn.QueryRow("SELECT exists (SELECT * FROM accounts WHERE id=$1)", line.AccountID).Scan(&exists)
+		_, err = accStmt.Exec(line.AccountID)
 		if err != nil {
-			log.Println("Error executing account exists query:", err)
+			log.Println("Error executing prepared statement of accounts:", err)
 			return false
-		}
-		if !exists {
-			res, err := accStmt.Exec(line.AccountID)
-			if err != nil {
-				log.Println("res:", res)
-				log.Println("Error executing prepared statement of accounts:", err)
-				return false
-			}
 		}
 	}
 	err = accStmt.Close()
