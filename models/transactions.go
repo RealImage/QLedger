@@ -17,17 +17,11 @@ type TransactionLine struct {
 }
 
 func (t *Transaction) IsValid() bool {
-	if len(t.Lines) == 0 {
-		return false
-	}
 	sum := 0
 	for _, line := range t.Lines {
 		sum += line.Delta
 	}
-	if sum == 0 {
-		return true
-	}
-	return false
+	return sum == 0
 }
 
 type TransactionDB struct {
