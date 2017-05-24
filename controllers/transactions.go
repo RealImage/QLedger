@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -16,37 +15,40 @@ func MakeTransaction(w http.ResponseWriter, r *http.Request, context *ledgerCont
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Println("Error reading payload:", err)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	transaction := &models.Transaction{}
 	err = json.Unmarshal(body, transaction)
 	if err != nil {
 		log.Println("Error loading JSON:", err)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	transactionsDB := models.TransactionDB{DB: context.DB}
 	// Skip if transaction already exists
 	if transactionsDB.IsExists(transaction.ID) {
-		fmt.Fprint(w, "Transaction already exists")
+		log.Println("Transaction is duplicate:", transaction.ID)
+		w.WriteHeader(http.StatusConflict)
 		return
 	}
 	// Skip if the transaction is invalid
 	// by validating the delta values
 	if !transaction.IsValid() {
-		fmt.Fprint(w, "Transaction invalid")
+		log.Println("Transaction is invalid:", transaction.ID)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	// Otherwise, do transaction
 	done := transactionsDB.DoTransaction(transaction)
 	if done {
-		fmt.Fprint(w, "Transaction is success")
+		w.WriteHeader(http.StatusCreated)
 		return
 	} else {
-		fmt.Fprint(w, "Transaction failed")
+		log.Println("Transaction failed:", transaction.ID)
+		w.WriteHeader(http.StatusAccepted)
 		return
 	}
-
-	//TODO: Return JSON response with proper status codes
 }
