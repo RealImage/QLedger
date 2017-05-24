@@ -49,17 +49,13 @@ func (as *AccountsSuite) TestAccountsInfoAPI() {
 	}
 	handler.ServeHTTP(rr, req)
 
-	account := models.Account{}
-	// test valid status code
 	assert.Equal(t, rr.Code, 200, "Invalid response code")
-	// test valid json
+	account := models.Account{}
 	err = json.Unmarshal(rr.Body.Bytes(), &account)
 	if err != nil {
 		t.Errorf("Invalid json response: %v", rr.Body.String())
 	}
-	// test valid id
 	assert.Equal(t, account.Id, "100", "Invalid account ID")
-	// test valid balance
 	assert.Equal(t, account.Balance, 0, "Invalid account balance")
 }
 
