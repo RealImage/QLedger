@@ -8,17 +8,10 @@ import (
 
 	ledgerContext "github.com/RealImage/QLedger/context"
 	"github.com/RealImage/QLedger/controllers"
+	"github.com/RealImage/QLedger/middlewares"
 	"github.com/julienschmidt/httprouter"
 	_ "github.com/lib/pq"
 )
-
-type Handler func(http.ResponseWriter, *http.Request, *ledgerContext.AppContext)
-
-func ContextMiddleware(handler Handler, context *ledgerContext.AppContext) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		handler(w, r, context)
-	}
-}
 
 func main() {
 	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
@@ -29,8 +22,8 @@ func main() {
 	appContext := &ledgerContext.AppContext{DB: db}
 
 	router := httprouter.New()
-	router.HandlerFunc("GET", "/v1/accounts", ContextMiddleware(controllers.GetAccountsInfo, appContext))
-	router.HandlerFunc("POST", "/v1/transactions", ContextMiddleware(controllers.MakeTransaction, appContext))
+	router.HandlerFunc("GET", "/v1/accounts", middlewares.ContextMiddleware(controllers.GetAccountInfo, appContext))
+	router.HandlerFunc("POST", "/v1/transactions", middlewares.ContextMiddleware(controllers.MakeTransaction, appContext))
 
 	port := "7000"
 	if lp := os.Getenv("PORT"); lp != "" {
