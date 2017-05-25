@@ -39,11 +39,6 @@ func (tdb *TransactionDB) IsExists(id string) bool {
 }
 
 func (tdb *TransactionDB) IsConflict(transaction *Transaction) bool {
-	// Ignore no-op transaction
-	if len(transaction.Lines) == 0 {
-		return false
-	}
-
 	// Read existing lines
 	rows, err := tdb.DB.Query("SELECT account_id, delta FROM lines WHERE transaction_id=$1", transaction.ID)
 	if err != nil {
@@ -69,7 +64,7 @@ func (tdb *TransactionDB) IsConflict(transaction *Transaction) bool {
 	return !reflect.DeepEqual(transaction.Lines, existingLines)
 }
 
-func (tdb *TransactionDB) DoTransaction(t *Transaction) bool {
+func (tdb *TransactionDB) Transact(t *Transaction) bool {
 	// Start the transaction
 	var err error
 	txn, err := tdb.DB.Begin()
@@ -80,15 +75,7 @@ func (tdb *TransactionDB) DoTransaction(t *Transaction) bool {
 
 	// Rollback transaction on any failures
 	defer func() {
-		if r := recover(); r != nil {
-			log.Fatal("Recovering while transaction", r)
-
-			log.Println("Rolling back the transaction:", t.ID)
-			err = txn.Rollback()
-			if err != nil {
-				log.Println("Error rolling back transaction:", err)
-			}
-		} else if err != nil {
+		if r := recover(); r != nil || err != nil {
 			log.Println("Rolling back the transaction:", t.ID)
 			err = txn.Rollback()
 			if err != nil {

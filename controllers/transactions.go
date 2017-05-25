@@ -54,7 +54,7 @@ func MakeTransaction(w http.ResponseWriter, r *http.Request, context *ledgerCont
 	}
 
 	// Otherwise, do transaction
-	done := transactionsDB.DoTransaction(transaction)
+	done := transactionsDB.Transact(transaction)
 	if done {
 		w.WriteHeader(http.StatusCreated)
 		return
