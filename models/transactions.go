@@ -3,6 +3,7 @@ package models
 import (
 	"database/sql"
 	"log"
+	"reflect"
 	"time"
 )
 
@@ -30,11 +31,42 @@ type TransactionDB struct {
 
 func (tdb *TransactionDB) IsExists(id string) bool {
 	var exists bool
-	err := tdb.DB.QueryRow("SELECT exists (SELECT * FROM transactions WHERE id=$1)", id).Scan(&exists)
+	err := tdb.DB.QueryRow("SELECT EXISTS (SELECT * FROM transactions WHERE id=$1)", id).Scan(&exists)
 	if err != nil {
 		log.Println("Error executing transaction exists query:", err)
 	}
 	return exists
+}
+
+func (tdb *TransactionDB) IsConflict(transaction *Transaction) bool {
+	// Ignore no-op transaction
+	if len(transaction.Lines) == 0 {
+		return false
+	}
+
+	// Read existing lines
+	rows, err := tdb.DB.Query("SELECT account_id, delta FROM lines WHERE transaction_id=$1", transaction.ID)
+	if err != nil {
+		log.Println("Error executing transaction lines query:", err)
+		return false
+	}
+	defer rows.Close()
+	var existingLines []*TransactionLine
+	for rows.Next() {
+		line := &TransactionLine{}
+		if err := rows.Scan(&line.AccountID, &line.Delta); err != nil {
+			log.Println("Error scanning transaction lines:", err)
+			return false
+		}
+		existingLines = append(existingLines, line)
+	}
+	if err := rows.Err(); err != nil {
+		log.Println("Error iterating transaction lines rows:", err)
+		return false
+	}
+
+	// Compare new and existing transaction lines
+	return !reflect.DeepEqual(transaction.Lines, existingLines)
 }
 
 func (tdb *TransactionDB) DoTransaction(t *Transaction) bool {

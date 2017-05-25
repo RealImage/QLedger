@@ -27,12 +27,24 @@ func MakeTransaction(w http.ResponseWriter, r *http.Request, context *ledgerCont
 	}
 
 	transactionsDB := models.TransactionDB{DB: context.DB}
-	// Skip if transaction already exists
+	// Check if a transaction with same ID already exists
 	if transactionsDB.IsExists(transaction.ID) {
-		log.Println("Transaction is duplicate:", transaction.ID)
-		w.WriteHeader(http.StatusConflict)
-		return
+		// Check if the transaction lines are different
+		// and conflicts with the existing lines
+		if transactionsDB.IsConflict(transaction) {
+			// The conflicting transactions are denied
+			log.Println("Transaction is conflicting:", transaction.ID)
+			w.WriteHeader(http.StatusConflict)
+			return
+		} else {
+			// Otherwise the transaction is just a duplicate
+			// The exactly duplicate transactions are ignored
+			log.Println("Transaction is duplicate:", transaction.ID)
+			w.WriteHeader(http.StatusAccepted)
+			return
+		}
 	}
+
 	// Skip if the transaction is invalid
 	// by validating the delta values
 	if !transaction.IsValid() {
@@ -48,7 +60,7 @@ func MakeTransaction(w http.ResponseWriter, r *http.Request, context *ledgerCont
 		return
 	} else {
 		log.Println("Transaction failed:", transaction.ID)
-		w.WriteHeader(http.StatusAccepted)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 }
