@@ -86,22 +86,12 @@ func (tdb *TransactionDB) Transact(t *Transaction) bool {
 
 	// Accounts do not need to be predefined
 	// they are called into existence when they are first used.
-	accStmt, err := txn.Prepare(`INSERT INTO accounts (id) VALUES ($1) ON CONFLICT (id) DO NOTHING`)
-	if err != nil {
-		log.Println("Error preparing statement of accounts:", err)
-		return false
-	}
 	for _, line := range t.Lines {
-		_, err = accStmt.Exec(line.AccountID)
+		_, err = txn.Exec("INSERT INTO accounts (id) VALUES ($1) ON CONFLICT (id) DO NOTHING", line.AccountID)
 		if err != nil {
-			log.Println("Error executing prepared statement of accounts:", err)
+			log.Println("Error inserting accounts:", err)
 			return false
 		}
-	}
-	err = accStmt.Close()
-	if err != nil {
-		log.Println("Error while closing prepared statement of accounts:", err)
-		return false
 	}
 
 	// Add transaction
@@ -112,22 +102,12 @@ func (tdb *TransactionDB) Transact(t *Transaction) bool {
 	}
 
 	// Add transaction lines
-	linesStmt, err := txn.Prepare(`INSERT INTO lines (transaction_id, account_id, delta) VALUES ($1, $2, $3)`)
-	if err != nil {
-		log.Println("Error preparing statement of lines:", err)
-		return false
-	}
 	for _, line := range t.Lines {
-		_, err = linesStmt.Exec(t.ID, line.AccountID, line.Delta)
+		_, err = txn.Exec("INSERT INTO lines (transaction_id, account_id, delta) VALUES ($1, $2, $3)", t.ID, line.AccountID, line.Delta)
 		if err != nil {
-			log.Println("Error executing prepared statement of lines:", err)
+			log.Println("Error inserting lines:", err)
 			return false
 		}
-	}
-	err = linesStmt.Close()
-	if err != nil {
-		log.Println("Error while closing prepared statement of lines:", err)
-		return false
 	}
 
 	// Commit the entire transaction
