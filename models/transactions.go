@@ -74,15 +74,14 @@ func (tdb *TransactionDB) Transact(t *Transaction) bool {
 	}
 
 	// Rollback transaction on any failures
-	defer func() {
+	handleTransactionError := func(txn *sql.Tx, err error) bool {
+		log.Println("Rolling back the transaction:", t.ID, "due to error:", err)
+		err = txn.Rollback()
 		if err != nil {
-			log.Println("Rolling back the transaction:", t.ID)
-			err = txn.Rollback()
-			if err != nil {
-				log.Println("Error rolling back transaction:", err)
-			}
+			log.Println("Error rolling back transaction:", err)
 		}
-	}()
+		return false
+	}
 
 	// Accounts do not need to be predefined
 	// they are called into existence when they are first used.
@@ -90,7 +89,7 @@ func (tdb *TransactionDB) Transact(t *Transaction) bool {
 		_, err = txn.Exec("INSERT INTO accounts (id) VALUES ($1) ON CONFLICT (id) DO NOTHING", line.AccountID)
 		if err != nil {
 			log.Println("Error inserting accounts:", err)
-			return false
+			return handleTransactionError(txn, err)
 		}
 	}
 
@@ -98,7 +97,7 @@ func (tdb *TransactionDB) Transact(t *Transaction) bool {
 	_, err = txn.Exec("INSERT INTO transactions (id, timestamp) VALUES ($1, $2)", t.ID, time.Now().UTC())
 	if err != nil {
 		log.Println("Error inserting transaction:", err)
-		return false
+		return handleTransactionError(txn, err)
 	}
 
 	// Add transaction lines
@@ -106,7 +105,7 @@ func (tdb *TransactionDB) Transact(t *Transaction) bool {
 		_, err = txn.Exec("INSERT INTO lines (transaction_id, account_id, delta) VALUES ($1, $2, $3)", t.ID, line.AccountID, line.Delta)
 		if err != nil {
 			log.Println("Error inserting lines:", err)
-			return false
+			return handleTransactionError(txn, err)
 		}
 	}
 
@@ -114,7 +113,7 @@ func (tdb *TransactionDB) Transact(t *Transaction) bool {
 	err = txn.Commit()
 	if err != nil {
 		log.Println("Error while committing the transaction:", err)
-		return false
+		return handleTransactionError(txn, err)
 	}
 
 	return true
