@@ -75,7 +75,7 @@ func (tdb *TransactionDB) Transact(t *Transaction) bool {
 
 	// Rollback transaction on any failures
 	defer func() {
-		if r := recover(); r != nil || err != nil {
+		if err != nil {
 			log.Println("Rolling back the transaction:", t.ID)
 			err = txn.Rollback()
 			if err != nil {
