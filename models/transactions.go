@@ -5,6 +5,8 @@ import (
 	"log"
 	"reflect"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 type Transaction struct {
@@ -75,7 +77,8 @@ func (tdb *TransactionDB) Transact(t *Transaction) bool {
 
 	// Rollback transaction on any failures
 	handleTransactionError := func(txn *sql.Tx, err error) bool {
-		log.Println("Rolling back the transaction:", t.ID, "due to error:", err)
+		log.Println(err)
+		log.Println("Rolling back the transaction:", t.ID)
 		err = txn.Rollback()
 		if err != nil {
 			log.Println("Error rolling back transaction:", err)
@@ -88,32 +91,28 @@ func (tdb *TransactionDB) Transact(t *Transaction) bool {
 	for _, line := range t.Lines {
 		_, err = txn.Exec("INSERT INTO accounts (id) VALUES ($1) ON CONFLICT (id) DO NOTHING", line.AccountID)
 		if err != nil {
-			log.Println("Error inserting accounts:", err)
-			return handleTransactionError(txn, err)
+			handleTransactionError(txn, errors.Wrap(err, "insert account failed"))
 		}
 	}
 
 	// Add transaction
 	_, err = txn.Exec("INSERT INTO transactions (id, timestamp) VALUES ($1, $2)", t.ID, time.Now().UTC())
 	if err != nil {
-		log.Println("Error inserting transaction:", err)
-		return handleTransactionError(txn, err)
+		handleTransactionError(txn, errors.Wrap(err, "insert transaction failed"))
 	}
 
 	// Add transaction lines
 	for _, line := range t.Lines {
 		_, err = txn.Exec("INSERT INTO lines (transaction_id, account_id, delta) VALUES ($1, $2, $3)", t.ID, line.AccountID, line.Delta)
 		if err != nil {
-			log.Println("Error inserting lines:", err)
-			return handleTransactionError(txn, err)
+			handleTransactionError(txn, errors.Wrap(err, "insert lines failed"))
 		}
 	}
 
 	// Commit the entire transaction
 	err = txn.Commit()
 	if err != nil {
-		log.Println("Error while committing the transaction:", err)
-		return handleTransactionError(txn, err)
+		handleTransactionError(txn, errors.Wrap(err, "commit transaction failed"))
 	}
 
 	return true
