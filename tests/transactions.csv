@@ -1,0 +1,10 @@
+transaction_id,account_id,delta
+100,alice,100
+100,bob,-100
+101,alice,100
+101,bob,-50
+101,carly,-50
+102,alice,-50
+102,bob,100
+102,carly,-25
+102,dev,-25
