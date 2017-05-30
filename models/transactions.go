@@ -5,6 +5,8 @@ import (
 	"log"
 	"reflect"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 type Transaction struct {
@@ -74,67 +76,43 @@ func (tdb *TransactionDB) Transact(t *Transaction) bool {
 	}
 
 	// Rollback transaction on any failures
-	defer func() {
-		if r := recover(); r != nil || err != nil {
-			log.Println("Rolling back the transaction:", t.ID)
-			err = txn.Rollback()
-			if err != nil {
-				log.Println("Error rolling back transaction:", err)
-			}
+	handleTransactionError := func(txn *sql.Tx, err error) bool {
+		log.Println(err)
+		log.Println("Rolling back the transaction:", t.ID)
+		err = txn.Rollback()
+		if err != nil {
+			log.Println("Error rolling back transaction:", err)
 		}
-	}()
+		return false
+	}
 
 	// Accounts do not need to be predefined
 	// they are called into existence when they are first used.
-	accStmt, err := txn.Prepare(`INSERT INTO accounts (id) VALUES ($1) ON CONFLICT (id) DO NOTHING`)
-	if err != nil {
-		log.Println("Error preparing statement of accounts:", err)
-		return false
-	}
 	for _, line := range t.Lines {
-		_, err = accStmt.Exec(line.AccountID)
+		_, err = txn.Exec("INSERT INTO accounts (id) VALUES ($1) ON CONFLICT (id) DO NOTHING", line.AccountID)
 		if err != nil {
-			log.Println("Error executing prepared statement of accounts:", err)
-			return false
+			handleTransactionError(txn, errors.Wrap(err, "insert account failed"))
 		}
-	}
-	err = accStmt.Close()
-	if err != nil {
-		log.Println("Error while closing prepared statement of accounts:", err)
-		return false
 	}
 
 	// Add transaction
 	_, err = txn.Exec("INSERT INTO transactions (id, timestamp) VALUES ($1, $2)", t.ID, time.Now().UTC())
 	if err != nil {
-		log.Println("Error inserting transaction:", err)
-		return false
+		handleTransactionError(txn, errors.Wrap(err, "insert transaction failed"))
 	}
 
 	// Add transaction lines
-	linesStmt, err := txn.Prepare(`INSERT INTO lines (transaction_id, account_id, delta) VALUES ($1, $2, $3)`)
-	if err != nil {
-		log.Println("Error preparing statement of lines:", err)
-		return false
-	}
 	for _, line := range t.Lines {
-		_, err = linesStmt.Exec(t.ID, line.AccountID, line.Delta)
+		_, err = txn.Exec("INSERT INTO lines (transaction_id, account_id, delta) VALUES ($1, $2, $3)", t.ID, line.AccountID, line.Delta)
 		if err != nil {
-			log.Println("Error executing prepared statement of lines:", err)
-			return false
+			handleTransactionError(txn, errors.Wrap(err, "insert lines failed"))
 		}
-	}
-	err = linesStmt.Close()
-	if err != nil {
-		log.Println("Error while closing prepared statement of lines:", err)
-		return false
 	}
 
 	// Commit the entire transaction
 	err = txn.Commit()
 	if err != nil {
-		log.Println("Error while committing the transaction:", err)
-		return false
+		handleTransactionError(txn, errors.Wrap(err, "commit transaction failed"))
 	}
 
 	return true
