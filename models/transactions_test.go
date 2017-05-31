@@ -28,7 +28,6 @@ func (ts *TransactionsModelSuite) SetupSuite() {
 	}
 }
 
-
 func (ts *TransactionsModelSuite) TestIsValid() {
 	t := ts.T()
 
@@ -142,7 +141,7 @@ func (ts *TransactionsModelSuite) TestTransact() {
 	transactionDB := TransactionDB{DB: ts.db}
 	
 	transaction := &Transaction {
-		ID: "t004", 
+		ID: "t003", 
 		Lines: []*TransactionLine {
 			&TransactionLine {
 				AccountID: "a1", 
@@ -157,7 +156,7 @@ func (ts *TransactionsModelSuite) TestTransact() {
 	done := transactionDB.Transact(transaction)
 	assert.Equal(t, done, true, "Transaction should be created")
 
-	exists := transactionDB.IsExists("t004")
+	exists := transactionDB.IsExists("t003")
 	assert.Equal(t, exists, true, "Transaction should exist")
 
 	done = transactionDB.Transact(transaction)
