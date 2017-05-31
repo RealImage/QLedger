@@ -91,28 +91,28 @@ func (tdb *TransactionDB) Transact(t *Transaction) bool {
 	for _, line := range t.Lines {
 		_, err = txn.Exec("INSERT INTO accounts (id) VALUES ($1) ON CONFLICT (id) DO NOTHING", line.AccountID)
 		if err != nil {
-			handleTransactionError(txn, errors.Wrap(err, "insert account failed"))
+			return handleTransactionError(txn, errors.Wrap(err, "insert account failed"))
 		}
 	}
 
 	// Add transaction
 	_, err = txn.Exec("INSERT INTO transactions (id, timestamp) VALUES ($1, $2)", t.ID, time.Now().UTC())
 	if err != nil {
-		handleTransactionError(txn, errors.Wrap(err, "insert transaction failed"))
+		return handleTransactionError(txn, errors.Wrap(err, "insert transaction failed"))
 	}
 
 	// Add transaction lines
 	for _, line := range t.Lines {
 		_, err = txn.Exec("INSERT INTO lines (transaction_id, account_id, delta) VALUES ($1, $2, $3)", t.ID, line.AccountID, line.Delta)
 		if err != nil {
-			handleTransactionError(txn, errors.Wrap(err, "insert lines failed"))
+			return handleTransactionError(txn, errors.Wrap(err, "insert lines failed"))
 		}
 	}
 
 	// Commit the entire transaction
 	err = txn.Commit()
 	if err != nil {
-		handleTransactionError(txn, errors.Wrap(err, "commit transaction failed"))
+		return handleTransactionError(txn, errors.Wrap(err, "commit transaction failed"))
 	}
 
 	return true
