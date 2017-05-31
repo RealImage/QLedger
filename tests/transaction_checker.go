@@ -20,7 +20,7 @@ func main() {
 	//TODO: Parse from commandline arguments
 	endpoint := "http://127.0.0.1:7000"
 	filename := "transactions.csv"
-	load := 10
+	load := 25
 
 	// Timestamp to avoid conflict IDs
 	timestamp := time.Now().UTC().Format("20060102150405")
@@ -35,7 +35,10 @@ func main() {
 		for i := 1; i <= load; i++ {
 			tag := fmt.Sprintf("sequential_%v_%v", i, timestamp)
 			t := CloneTransaction(transaction, tag)
-			PostTransaction(endpoint, t)
+			status := PostTransaction(endpoint, t)
+			if status != http.StatusCreated {
+				log.Fatalf("Sequential transaction:%v failed with status code:%v", t["id"], status)
+			}
 		}
 	}
 	VerifyExpectedBalance(endpoint, accounts)
@@ -51,7 +54,10 @@ func main() {
 			tag := fmt.Sprintf("parallel_%v_%v", i, timestamp)
 			t := CloneTransaction(transaction, tag)
 			go func() {
-				PostTransaction(endpoint, t)
+				status := PostTransaction(endpoint, t)
+				if status != http.StatusCreated {
+					log.Fatalf("Parallel transaction:%v failed with status code:%v", t["id"], status)
+				}
 				pwg.Done()
 			}()
 		}
@@ -69,14 +75,25 @@ func main() {
 		for i := 1; i <= load; i++ {
 			tag := fmt.Sprintf("repeated_%v_%v", i, timestamp)
 			t := CloneTransaction(transaction, tag)
+			var localwg sync.WaitGroup
+			localwg.Add(2)
+			var status1, status2 int
 			go func() {
-				PostTransaction(endpoint, t)
+				status1 = PostTransaction(endpoint, t)
 				rwg.Done()
+				localwg.Done()
 			}()
 			go func() {
-				PostTransaction(endpoint, t)
+				status2 = PostTransaction(endpoint, t)
 				rwg.Done()
+				localwg.Done()
 			}()
+			localwg.Wait()
+			if status1 == http.StatusCreated && status2 == http.StatusCreated {
+				log.Fatalf("Parallel repeated transactions with same ID %v are accepted", t["id"])
+			} else if status1 >= 400 && status2 >= 400 {
+				log.Fatalf("Both parallel repeated transactions with same ID %v are failed", t["id"])
+			}
 		}
 	}
 	rwg.Wait()
@@ -167,7 +184,7 @@ func GetAccountBalance(endpoint string, accountID interface{}) int {
 	return account.Balance
 }
 
-func PostTransaction(endpoint string, transaction map[string]interface{}) {
+func PostTransaction(endpoint string, transaction map[string]interface{}) int {
 	log.Printf("Posting transaction: %v", transaction["id"])
 	payload, err := json.Marshal(transaction)
 	if err != nil {
@@ -176,11 +193,10 @@ func PostTransaction(endpoint string, transaction map[string]interface{}) {
 	transactionsURL := endpoint + "/v1/transactions"
 	res, err := http.Post(transactionsURL, "application/json", bytes.NewBuffer(payload))
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Error in transaction:%v (%v)", transaction["id"], err)
 	}
-	if res.StatusCode >= 400 {
-		log.Fatal("Transaction failed with status code:", res.StatusCode)
-	}
+	log.Printf("Completed transaction:%v with status:%v", transaction["id"], res.StatusCode)
+	return res.StatusCode
 }
 
 func CloneTransaction(transaction map[string]interface{}, tag string) map[string]interface{} {
