@@ -28,6 +28,31 @@ func (ts *TransactionsModelSuite) SetupSuite() {
 	}
 }
 
+
+func (ts *TransactionsModelSuite) TestIsValid() {
+	t := ts.T()
+
+	transaction := &Transaction {
+		ID: "t001", 
+		Lines: []*TransactionLine {
+			&TransactionLine {
+				AccountID: "a1", 
+				Delta: 100,
+			}, 
+			&TransactionLine {
+				AccountID: "a2", 
+				Delta: -100,
+			},
+		},
+	}
+	valid := transaction.IsValid()
+	assert.Equal(t, valid, true, "Transaction should be valid")
+
+	transaction.Lines[0].Delta = 200
+	valid = transaction.IsValid()
+	assert.Equal(t, valid, false, "Transaction should not be valid")
+}
+
 func (ts *TransactionsModelSuite) TestIsExists() {
 	t := ts.T()
 
