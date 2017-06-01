@@ -10,12 +10,8 @@ database:
 test:
   override:
     - go test ./...
-    - go run tests/transaction_checker.go
+    # - go run tests/transaction_checker.go
   minitest_globs:
     - tests/*
     - controllers/*.go
     - models/*.go
-
-notify:
-  webhooks:
-    - url: https://hooks.slack.com/services/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
