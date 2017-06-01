@@ -1,0 +1,21 @@
+machine:
+  environment:
+    TEST_DATABASE_URL: "postgres://root@localhost:5432/ci_ledgerdb?sslmode=disable"
+
+database:
+  override:
+    - createdb ci_ledgerdb
+    - psql ci_ledgerdb < schema.sql
+
+test:
+  override:
+    - go test ./...
+    - go run tests/transaction_checker.go
+  minitest_globs:
+    - tests/*
+    - controllers/*.go
+    - models/*.go
+
+notify:
+  webhooks:
+    - url: https://hooks.slack.com/services/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
