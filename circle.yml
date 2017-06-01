@@ -1,0 +1,17 @@
+machine:
+  environment:
+    TEST_DATABASE_URL: "postgres://root@localhost:5432/ci_ledgerdb?sslmode=disable"
+
+database:
+  override:
+    - createdb ci_ledgerdb
+    - psql ci_ledgerdb < schema.sql
+
+test:
+  override:
+    - go test ./... -race
+    # - go run tests/transaction_checker.go
+  minitest_globs:
+    - tests/*
+    - controllers/*.go
+    - models/*.go
