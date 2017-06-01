@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/csv"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -17,10 +18,12 @@ import (
 )
 
 func main() {
-	//TODO: Parse from commandline arguments
-	endpoint := "http://127.0.0.1:7000"
-	filename := "transactions.csv"
-	load := 25
+	var endpoint, filename string
+	var load int
+	flag.StringVar(&endpoint, "endpoint", "http://127.0.0.1:7000", "API endpoint")
+	flag.StringVar(&filename, "filename", "transactions.csv", "Transactions CSV file")
+	flag.IntVar(&load, "load", 10, "Load count for repeating the tests")
+	flag.Parse()
 
 	// Timestamp to avoid conflict IDs
 	timestamp := time.Now().UTC().Format("20060102150405")
