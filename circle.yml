@@ -10,7 +10,7 @@ database:
 test:
   override:
     - go test ./...
-    - go run tests/transaction_checker.go
+    # - go run tests/transaction_checker.go
   minitest_globs:
     - tests/*
     - controllers/*.go
