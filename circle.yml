@@ -10,7 +10,7 @@ database:
 test:
   override:
     - go test ./... -race
-    # - go run tests/transaction_checker.go
+    # - go run tests/transaction_checker.go -endpoint=https://qwledger.herokuapp.com -load=10 -filename=tests/transactions.csv
   minitest_globs:
     - tests/*
     - controllers/*.go

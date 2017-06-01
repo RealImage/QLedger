@@ -33,4 +33,3 @@ bin/
 QLedger
 .rvmrc
 dump.rdb
-*.csv
