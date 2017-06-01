@@ -15,7 +15,3 @@ test:
     - tests/*
     - controllers/*.go
     - models/*.go
-
-notify:
-  webhooks:
-    - url: https://hooks.slack.com/services/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
