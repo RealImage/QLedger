@@ -3,8 +3,6 @@
 	"GoVersion": "go1.8",
 	"GodepVersion": "v79",
 	"Packages": [
-		"github.com/davecgh/go-spew/spew",
-		"github.com/pmezard/go-difflib/difflib",
 		"./..."
 	],
 	"Deps": [
