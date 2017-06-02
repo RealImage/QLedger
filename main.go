@@ -9,10 +9,8 @@ import (
 	ledgerContext "github.com/RealImage/QLedger/context"
 	"github.com/RealImage/QLedger/controllers"
 	"github.com/RealImage/QLedger/middlewares"
-	_ "github.com/davecgh/go-spew/spew"
 	"github.com/julienschmidt/httprouter"
 	_ "github.com/lib/pq"
-	_ "github.com/pmezard/go-difflib/difflib"
 )
 
 func main() {
