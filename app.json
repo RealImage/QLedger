@@ -9,6 +9,9 @@
   "addons": [
     "heroku-postgresql"
   ],
+  "scripts": {
+    "postdeploy": "echo 'Success'"
+  },
   "buildpacks": [
     {
       "url": "heroku/go"
