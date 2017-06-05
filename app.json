@@ -10,7 +10,6 @@
     "heroku-postgresql"
   ],
   "scripts": {
-    "postdeploy": "heroku pg:psql < schema.sql"
   },
   "buildpacks": [
     {
