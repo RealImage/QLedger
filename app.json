@@ -10,6 +10,7 @@
     "heroku-postgresql"
   ],
   "scripts": {
+    "postdeploy": "echo 'Success'"
   },
   "buildpacks": [
     {
