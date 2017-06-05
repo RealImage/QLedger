@@ -1,7 +1,5 @@
 {
   "name": "QLedger",
-  "scripts": {
-  },
   "env": {
   },
   "formation": {
@@ -9,9 +7,6 @@
   "addons": [
     "heroku-postgresql"
   ],
-  "scripts": {
-    "postdeploy": "echo 'Success'"
-  },
   "buildpacks": [
     {
       "url": "heroku/go"
