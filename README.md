@@ -144,30 +144,32 @@ So after the above initial tagging and re-tagging, the tags list of transaction 
 The transactions and accounts can be filtered using the tags filter API as follows:
 #### GET `/v1/:model/tags/:tag1/:tag2/.../:tagN`
 
-All transactions with tag `{"christmas-offer": V}` can be listed as follows:
-> V can be of any value even `null`
+Here are samples how transactions can be filtered with tags:
+
 #### GET `/v1/transactions/tags/christmas-offer`
-
-All transactions with BOTH tags `{"christmas-offer": V, "hold-on": V}` can be listed as follows:
+All transactions with tag `{"christmas-offer": V}`  will be listed.
 > V can be of any value even `null`
+
 #### GET `/v1/transactions/tags/christmas-offer/hold-on`
+All transactions with BOTH tags `{"christmas-offer": V, "hold-on": V}` will be listed.
+> V can be of any value even `null`
 
-All transactions with tag `{"status": "completed"}` can be listed as follows:
 #### GET `/v1/transactions/tags/status:completed`
+All transactions with tag `{"status": "completed"}` will be listed.
 
-All transactions with tag `{"months": V}` can be listed as follows:
-> V should be atleast one of the values of `"jan"`, `"feb"`, `["jan",..]`, `["feb",..]`
 #### GET `/v1/transactions/tags/months:jan,feb`
+All transactions with tag `{"months": V}` will be listed.
+> V should be atleast one of the values of `"jan"`, `"feb"`, `["jan",..]`, `["feb",..]`
 
-All transactions with BOTH tags `{"months": V1}`  AND `{"active": V2}` can be listed as follows:
+#### GET `/v1/transactions/tags/months:jan,feb/active:true`
+All transactions with BOTH tags `{"months": V1}`  AND `{"active": V2}` will be listed.
 > V1 should be atleast one of the values of `"jan"`, `"feb"`, `["jan",..]`, `["feb",..]`
 > V2 can be either `true` or `"true"`
-#### GET `/v1/transactions/tags/months:jan,feb/active:true`
 
-All transactions with tag `{"products": {"qw": {"year": V,..},..},..}` can be listed as follows:
-> V can be either `2017` or `"2017"`
 #### GET `/v1/transactions/tags/products:qw:year:2017`
+All transactions with tag `{"products": {"qw": {"year": V,..},..},..}` will be listed.
+> V can be either `2017` or `"2017"`
 
-All transactions with tag `{"products": {"jt": {"coupons": V,..},..},..}` can be listed as follows:
-> V1 should be atleast one of the values of `"x001"`, `"y001"`, `["x001",..]`, `["y001",..]`
 #### GET `/v1/transactions/tags/products:jt:coupons:x001,y001`
+All transactions with tag `{"products": {"jt": {"coupons": V,..},..},..}` will be listed.
+> V1 should be atleast one of the values of `"x001"`, `"y001"`, `["x001",..]`, `["y001",..]`
