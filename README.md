@@ -141,8 +141,7 @@ So after the above initial tagging and re-tagging, the tags list of transaction 
 }
 ```
 
-The transactions and accounts can be filtered using the tags filter API as follows:
-#### GET `/v1/:model/tags/:tag1/:tag2/.../:tagN`
+The transactions and accounts can be filtered using the tags filter API `GET /v1/:model/tags/:tag1/:tag2/.../:tagN`
 
 Here are samples how transactions can be filtered with tags:
 
