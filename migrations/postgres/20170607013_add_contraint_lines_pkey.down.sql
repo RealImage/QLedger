@@ -1,0 +1,2 @@
+ALTER TABLE ONLY lines
+    DROP CONSTRAINT IF EXISTS lines_pkey;
