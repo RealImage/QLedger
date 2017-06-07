@@ -43,29 +43,29 @@ All accounts and transactions are identified by a string identifier, which also 
 
 #### Metadata for Querying and Reports
 
-Transactions and accounts can be tagged with arbitrary number of key-value pairs which helps in grouping and filtering by one or more criteria.
-
-The keys are usually a plain string and the values can be one of string, numbers, boolean, arrays(of string, numbers or boolean) or an object. The object values can be composite of all the above types in recursive manner.
+Transactions and accounts can be tagged with arbitrary number of key-value pairs which helps in grouping and filtering by one or more criteria. The keys and values are limited to be simple ASCII strings for now.
 
 For transactions, the tags can be available either while creation or can later be tagged. But the accounts can be tagged only after it is created through a transaction.
 
-Both transactions and accounts can be re-tagged multiple times. When a same key is re-tagged, the old value will be overwritten by the new value. When a new key is available while re-tagging, the key & value will be added to the existing list of tags.
+Both transactions and accounts can be re-tagged multiple times. Duplicate key-value pairs are simply ignored.
 
-A typical tags object will be as follows:
+A typical tags list will be as follows:
 ```
 {
-  "key1": null,
-  "key2": null,
-  "key3": "val1",
-  "key4": ["val1, "val2", "val3"],
-  "key5": {
-    "key51": {
-      "key511": "val1"
-    },
-    "key52": ["val1", "val2"]
-  }
+  tags: [
+    {"key": "k1", "value": ""},             // Key only
+    {"key": "k2", "value": "v2"},           // Key Value
+    {"key": "k3.n1.n2", "value": "v3"},     // Nested key using (.)
+    {"key": "k4:n1:n2", "value": "v4"},     // Nested key using (:)
+    {"key": "k5", "value": "1234"},         // Numerical value as string
+    {"key": "k6", "value": "2017-12-01"},   // Date value as string
+    {"key": "k7", "value": "av1"},          // Array values "av1", "av2", "av3"
+    {"key": "k7", "value": "av2"},
+    {"key": "k7", "value": "av3"}
+  ]
 }
 ```
+> The key value formats here are just samples and they can be any possible ASCII combination.
 
 The transactions can be tagged while creation as follows:
 #### POST `/v1/transactions`
@@ -82,18 +82,14 @@ The transactions can be tagged while creation as follows:
       "delta": 100
     }
   ],
-  "tags": {
-    "christmas-offer": null,
-    "status": "completed",
-    "active": true,
-    "months": ["jan", "feb"],
-    "products": {
-      "qw": {
-        "coupons": ["x001"],
-        "year": 2017
-      }
-    }
-  }
+  tags: [
+    {"key": "christmas-offer", "value": ""},
+    {"key": "status", "value": "completed"},
+    {"key": "products.qw.coupons", "value": "x001"},
+    {"key": "products.qw.year", "value": "2017"},
+    {"key": "months", "value": "jan"},
+    {"key": "months", "value": "feb"}
+  ]
 }
 ```
 
@@ -103,19 +99,14 @@ The transaction with ID `abcd1234` can be re-tagged as follows:
 #### POST `/v1/transactions/abcd1234/tags`
 ```
 {
-  "hold-on": null,
-  "active": true,
-  "months": ["jan, "feb", "mar"],
-  "products": {
-    "qw": {
-      "coupons": ["x001", "y001"],
-      "year": 2017
-    },
-    "jt": {
-      "coupons": ["x001", "y001", "z001"],
-      "year": 2016
-    }
-  }
+  tags: [
+    {"key": "hold-on", "value": ""},
+    {"key": "active", "value": "true"},
+    {"key": "products.qw.coupons", "value": "y001"},
+    {"key": "products.qw.coupons", "value": "z001"},
+    {"key": "months", "value": "jan"},
+    {"key": "months", "value": "mar"}
+  ]
 }
 ```
 
@@ -123,21 +114,19 @@ So after the above initial tagging and re-tagging, the tags list of transaction 
 
 ```
 {
-  "christmas-offer": null,
-  "hold-on": null,
-  "status": "completed",
-  "active": true,
-  "months": ["jan, "feb", "mar"],
-  "products": {
-    "qw": {
-      "coupons": ["x001"],
-      "year": 2017
-    },
-    "jt": {
-      "coupons": ["x001", "y001", "z001"],
-      "year": 2016
-    }
-  }
+  tags: [
+    {"key": "christmas-offer", "value": ""},
+    {"key": "hold-on", "value": ""},
+    {"key": "active", "value": "true"},
+    {"key": "status", "value": "completed"},
+    {"key": "products.qw.coupons", "value": "x001"},
+    {"key": "products.qw.coupons", "value": "y001"},
+    {"key": "products.qw.coupons", "value": "z001"},
+    {"key": "products.qw.year", "value": "2017"},
+    {"key": "months", "value": "jan"},
+    {"key": "months", "value": "feb"},
+    {"key": "months", "value": "mar"}
+  ]
 }
 ```
 
@@ -146,29 +135,28 @@ The transactions and accounts can be filtered using the tags filter API `GET /v1
 Here are samples how transactions can be filtered with tags:
 
 #### GET `/v1/transactions/tags/christmas-offer`
-All transactions with tag `{"christmas-offer": V}`  will be listed.
-> V can be of any value even `null`
+All transactions with tag `{"key": "christmas-offer", "value": V}`  will be listed.
+> V can be of any value
 
 #### GET `/v1/transactions/tags/christmas-offer/hold-on`
-All transactions with BOTH tags `{"christmas-offer": V, "hold-on": V}` will be listed.
-> V can be of any value even `null`
+All transactions with BOTH tags `{"key": "christmas-offer", "value": V1}` and `{"key": "hold-on", "value": V2}` will be listed.
+> V1 and V2 can be of any value
 
 #### GET `/v1/transactions/tags/status:completed`
-All transactions with tag `{"status": "completed"}` will be listed.
+All transactions with tag `{"key": "status", "value": "completed"}` will be listed.
 
 #### GET `/v1/transactions/tags/months:jan,feb`
-All transactions with tag `{"months": V}` will be listed.
-> V should be atleast one of the values of `"jan"`, `"feb"`, `["jan",..]`, `["feb",..]`
+All transactions with tag `{"key": "months", "value": V}` will be listed.
+> V should be ATLEAST ONE of the values of `"jan"`, `"feb"`
 
 #### GET `/v1/transactions/tags/months:jan,feb/active:true`
-All transactions with BOTH tags `{"months": V1}`  AND `{"active": V2}` will be listed.
-> V1 should be atleast one of the values of `"jan"`, `"feb"`, `["jan",..]`, `["feb",..]`
-> V2 can be either `true` or `"true"`
+All transactions with BOTH tags `{"key": "months", "value": V}`  AND `{"key": "active", "value": "true"}` will be listed.
+> V should be ATLEAST ONE of the values of `"jan"`, `"feb"`
 
-#### GET `/v1/transactions/tags/products:qw:year:2017`
-All transactions with tag `{"products": {"qw": {"year": V,..},..},..}` will be listed.
-> V can be either `2017` or `"2017"`
+#### GET `/v1/transactions/tags/products.qw.year:2017`
+All transactions with tag `{"key": "products.qw.year", "value": "2017"}` will be listed.
+> Warning: The nested key can also be formatted with (:), so care must be taken while implementation.
 
-#### GET `/v1/transactions/tags/products:jt:coupons:x001,y001`
-All transactions with tag `{"products": {"jt": {"coupons": V,..},..},..}` will be listed.
-> V1 should be atleast one of the values of `"x001"`, `"y001"`, `["x001",..]`, `["y001",..]`
+#### GET `/v1/transactions/tags/products.qw.coupons:x001,y001`
+All transactions with tag `{"key": "products.qw.coupons", "value": V}` will be listed.
+> V should be atleast one of the values of `"x001"`, `"y001"`
