@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+echo "Checking for DB schema changes.."
+DB=`echo $DATABASE_URL|cut -d/ -f4|cut -d? -f1`
+pg_dump -s -x -O $DB | grep -v -e "^--" -e "^$" > schema.sql
+SCHEMA_CHANGED=`git ls-files -m|grep schema.sql`
+if [ "$SCHEMA_CHANGED" != "" ]; then
+  echo "Schema is changed and the changes are dumped to schema.sql"
+  echo "Please add the file to Git and commit"
+  echo "Aborted commit"
+  exit 1
+else
+  echo "No changes in schema!"
+fi

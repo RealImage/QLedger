@@ -1,9 +1,12 @@
 ## Scripts
 
-#### Dump schema
+#### Install Hooks
 
 ```
 cd QLedger
-bash scripts/dump_schema.sql
-cat schema.sql
+bash scripts/install_hooks.sh
 ```
+
+The above script install Git hooks which does the following tasks:
+
+ - Identify the schema changes and dumps to `schema.sql`
