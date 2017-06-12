@@ -40,3 +40,8 @@ go run transaction_checker.go -endpoint=https://qubeledger.herokuapp.com -load=1
 ```
 go run transaction_checker.go -load=10 -filename=transactions.csv
 ```
+
+- Run using `go test`
+```
+go test ./tests/
+```

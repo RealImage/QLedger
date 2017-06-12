@@ -14,6 +14,7 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"testing"
 	"time"
 
 	ledgerContext "github.com/RealImage/QLedger/context"
@@ -21,36 +22,20 @@ import (
 	"github.com/RealImage/QLedger/middlewares"
 	"github.com/RealImage/QLedger/models"
 	_ "github.com/lib/pq"
+	"github.com/stretchr/testify/suite"
 )
 
 // CSV tests runner
 func main() {
 	var endpoint, filename string
 	var load int
-	flag.StringVar(&endpoint, "endpoint", "", "API endpoint")
+	flag.StringVar(&endpoint, "endpoint", "http://127.0.0.1:7000", "API endpoint")
 	flag.StringVar(&filename, "filename", "transactions.csv", "Transactions CSV file")
 	flag.IntVar(&load, "load", 10, "Load count for repeating the tests")
 	flag.Parse()
 
-	if len(endpoint) == 0 {
-		log.Println("Connecting to the test database")
-		db, err := sql.Open("postgres", os.Getenv("TEST_DATABASE_URL"))
-		if err != nil {
-			log.Panic("Unable to connect to Database:", err)
-		}
-		log.Println("Successfully established connection to database.")
-		log.Println("Starting test enpoints...")
-		appContext := &ledgerContext.AppContext{DB: db}
-		accountServer := httptest.NewServer(middlewares.ContextMiddleware(controllers.GetAccountInfo, appContext))
-		transactionsServer := httptest.NewServer(middlewares.ContextMiddleware(controllers.MakeTransaction, appContext))
-		defer accountServer.Close()
-		defer transactionsServer.Close()
-		log.Println("Running tests from endpoints:", accountServer.URL, transactionsServer.URL)
-		RunCSVTests(accountServer.URL, transactionsServer.URL, filename, load)
-	} else {
-		log.Println("Running tests from endpoint:", endpoint)
-		RunCSVTests(endpoint, endpoint, filename, load)
-	}
+	log.Println("Running tests from endpoint:", endpoint)
+	RunCSVTests(endpoint, endpoint, filename, load)
 }
 
 func RunCSVTests(accountsEndpoint string, transactionsEndpoint string, filename string, load int) {
@@ -257,4 +242,54 @@ func VerifyExpectedBalance(endpoint string, accounts []map[string]interface{}) {
 			panic("Incorrect balance")
 		}
 	}
+}
+
+type CSVSuite struct {
+	suite.Suite
+	context            *ledgerContext.AppContext
+	accountServer      *httptest.Server
+	transactionsServer *httptest.Server
+}
+
+func (cs *CSVSuite) SetupTest() {
+	log.Println("Connecting to the test database")
+	db, err := sql.Open("postgres", os.Getenv("TEST_DATABASE_URL"))
+	if err != nil {
+		log.Panic("Unable to connect to Database:", err)
+	}
+	log.Println("Successfully established connection to database.")
+	log.Println("Starting test endpoints...")
+	cs.context = &ledgerContext.AppContext{DB: db}
+	cs.accountServer = httptest.NewServer(middlewares.ContextMiddleware(controllers.GetAccountInfo, cs.context))
+	cs.transactionsServer = httptest.NewServer(middlewares.ContextMiddleware(controllers.MakeTransaction, cs.context))
+}
+
+func (cs *CSVSuite) TestTransactionsLoad() {
+	log.Println("Running tests from endpoints:", cs.accountServer.URL, cs.transactionsServer.URL)
+	RunCSVTests(cs.accountServer.URL, cs.transactionsServer.URL, "transactions.csv", 3)
+}
+
+func (cs *CSVSuite) TearDownTest() {
+	log.Println("Closing test endpoints...")
+	defer cs.accountServer.Close()
+	defer cs.transactionsServer.Close()
+
+	log.Println("Cleaning up the test database")
+	t := cs.T()
+	_, err := cs.context.DB.Exec(`DELETE FROM lines`)
+	if err != nil {
+		t.Fatal("Error deleting lines:", err)
+	}
+	_, err = cs.context.DB.Exec(`DELETE FROM transactions`)
+	if err != nil {
+		t.Fatal("Error deleting transactions:", err)
+	}
+	_, err = cs.context.DB.Exec(`DELETE FROM accounts`)
+	if err != nil {
+		t.Fatal("Error deleting accounts:", err)
+	}
+}
+
+func TestCSVSuite(t *testing.T) {
+	suite.Run(t, new(CSVSuite))
 }
