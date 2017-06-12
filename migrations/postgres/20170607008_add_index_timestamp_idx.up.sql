@@ -1,0 +1,1 @@
+CREATE INDEX timestamp_idx ON transactions USING brin ("timestamp");

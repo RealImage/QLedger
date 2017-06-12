@@ -1,0 +1,2 @@
+ALTER TABLE ONLY lines
+    ADD CONSTRAINT lines_pkey PRIMARY KEY (id);
