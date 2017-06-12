@@ -44,6 +44,10 @@ CREATE SEQUENCE lines_id_seq
     NO MAXVALUE
     CACHE 1;
 ALTER SEQUENCE lines_id_seq OWNED BY lines.id;
+CREATE TABLE schema_migrations (
+    version bigint NOT NULL,
+    dirty boolean NOT NULL
+);
 CREATE TABLE transaction_tags (
     transaction_id character varying NOT NULL,
     key character varying NOT NULL,
@@ -54,14 +58,12 @@ CREATE TABLE transactions (
     "timestamp" timestamp without time zone NOT NULL
 );
 ALTER TABLE ONLY lines ALTER COLUMN id SET DEFAULT nextval('lines_id_seq'::regclass);
-ALTER TABLE ONLY account_tags
-    ADD CONSTRAINT account_tags_pkey PRIMARY KEY (account_id);
 ALTER TABLE ONLY accounts
     ADD CONSTRAINT accounts_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY lines
     ADD CONSTRAINT lines_pkey PRIMARY KEY (id);
-ALTER TABLE ONLY transaction_tags
-    ADD CONSTRAINT transaction_tags_pkey PRIMARY KEY (transaction_id);
+ALTER TABLE ONLY schema_migrations
+    ADD CONSTRAINT schema_migrations_pkey PRIMARY KEY (version);
 ALTER TABLE ONLY transactions
     ADD CONSTRAINT transactions_pkey PRIMARY KEY (id);
 CREATE UNIQUE INDEX account_tags_lookup_idx ON account_tags USING btree (value, key, account_id);
