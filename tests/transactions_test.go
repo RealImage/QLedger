@@ -1,4 +1,4 @@
-package main
+package tests
 
 import (
 	"bufio"
@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"encoding/csv"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -24,19 +23,6 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/suite"
 )
-
-// CSV tests runner
-func main() {
-	var endpoint, filename string
-	var load int
-	flag.StringVar(&endpoint, "endpoint", "http://127.0.0.1:7000", "API endpoint")
-	flag.StringVar(&filename, "filename", "transactions.csv", "Transactions CSV file")
-	flag.IntVar(&load, "load", 10, "Load count for repeating the tests")
-	flag.Parse()
-
-	log.Println("Running tests from endpoint:", endpoint)
-	RunCSVTests(endpoint, endpoint, filename, load)
-}
 
 func RunCSVTests(accountsEndpoint string, transactionsEndpoint string, filename string, load int) {
 	// Timestamp to avoid conflict IDs
