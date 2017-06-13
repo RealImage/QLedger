@@ -1,30 +1,30 @@
-package main
+package tests
 
 import (
 	"bufio"
 	"bytes"
+	"database/sql"
 	"encoding/csv"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"log"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"strconv"
 	"sync"
+	"testing"
 	"time"
 
+	ledgerContext "github.com/RealImage/QLedger/context"
+	"github.com/RealImage/QLedger/controllers"
+	"github.com/RealImage/QLedger/middlewares"
 	"github.com/RealImage/QLedger/models"
+	_ "github.com/lib/pq"
+	"github.com/stretchr/testify/suite"
 )
 
-func main() {
-	var endpoint, filename string
-	var load int
-	flag.StringVar(&endpoint, "endpoint", "http://127.0.0.1:7000", "API endpoint")
-	flag.StringVar(&filename, "filename", "transactions.csv", "Transactions CSV file")
-	flag.IntVar(&load, "load", 10, "Load count for repeating the tests")
-	flag.Parse()
-
+func RunCSVTests(accountsEndpoint string, transactionsEndpoint string, filename string, load int) {
 	// Timestamp to avoid conflict IDs
 	timestamp := time.Now().UTC().Format("20060102150405")
 
@@ -33,23 +33,23 @@ func main() {
 
 	// test sequential transactions
 	log.Println("Testing sequential transactions...")
-	PrepareExpectedBalance(endpoint, accounts, load)
+	PrepareExpectedBalance(accountsEndpoint, accounts, load)
 	for _, transaction := range transactions {
 		for i := 1; i <= load; i++ {
 			tag := fmt.Sprintf("sequential_%v_%v", i, timestamp)
 			t := CloneTransaction(transaction, tag)
-			status := PostTransaction(endpoint, t)
+			status := PostTransaction(transactionsEndpoint, t)
 			if status != http.StatusCreated {
 				log.Fatalf("Sequential transaction:%v failed with status code:%v", t["id"], status)
 			}
 		}
 	}
-	VerifyExpectedBalance(endpoint, accounts)
+	VerifyExpectedBalance(accountsEndpoint, accounts)
 	log.Println("Successful sequential transactions")
 
 	// test parallel transactions
 	log.Println("Testing parallel transactions...")
-	PrepareExpectedBalance(endpoint, accounts, load)
+	PrepareExpectedBalance(accountsEndpoint, accounts, load)
 	var pwg sync.WaitGroup
 	pwg.Add(len(transactions) * load)
 	for _, transaction := range transactions {
@@ -57,7 +57,7 @@ func main() {
 			tag := fmt.Sprintf("parallel_%v_%v", i, timestamp)
 			t := CloneTransaction(transaction, tag)
 			go func() {
-				status := PostTransaction(endpoint, t)
+				status := PostTransaction(transactionsEndpoint, t)
 				if status != http.StatusCreated {
 					log.Fatalf("Parallel transaction:%v failed with status code:%v", t["id"], status)
 				}
@@ -66,12 +66,12 @@ func main() {
 		}
 	}
 	pwg.Wait()
-	VerifyExpectedBalance(endpoint, accounts)
+	VerifyExpectedBalance(accountsEndpoint, accounts)
 	log.Println("Successful parallel transactions")
 
 	// test repeated parallel transactions
 	log.Println("Testing repeated parallel transactions...")
-	PrepareExpectedBalance(endpoint, accounts, load)
+	PrepareExpectedBalance(accountsEndpoint, accounts, load)
 	var rwg sync.WaitGroup
 	rwg.Add(len(transactions) * load * 2)
 	for _, transaction := range transactions {
@@ -82,12 +82,12 @@ func main() {
 			localwg.Add(2)
 			var status1, status2 int
 			go func() {
-				status1 = PostTransaction(endpoint, t)
+				status1 = PostTransaction(transactionsEndpoint, t)
 				rwg.Done()
 				localwg.Done()
 			}()
 			go func() {
-				status2 = PostTransaction(endpoint, t)
+				status2 = PostTransaction(transactionsEndpoint, t)
 				rwg.Done()
 				localwg.Done()
 			}()
@@ -100,7 +100,7 @@ func main() {
 		}
 	}
 	rwg.Wait()
-	VerifyExpectedBalance(endpoint, accounts)
+	VerifyExpectedBalance(accountsEndpoint, accounts)
 	log.Println("Successful repeated parallel transactions")
 }
 
@@ -228,4 +228,54 @@ func VerifyExpectedBalance(endpoint string, accounts []map[string]interface{}) {
 			panic("Incorrect balance")
 		}
 	}
+}
+
+type CSVSuite struct {
+	suite.Suite
+	context            *ledgerContext.AppContext
+	accountServer      *httptest.Server
+	transactionsServer *httptest.Server
+}
+
+func (cs *CSVSuite) SetupTest() {
+	log.Println("Connecting to the test database")
+	db, err := sql.Open("postgres", os.Getenv("TEST_DATABASE_URL"))
+	if err != nil {
+		log.Panic("Unable to connect to Database:", err)
+	}
+	log.Println("Successfully established connection to database.")
+	log.Println("Starting test endpoints...")
+	cs.context = &ledgerContext.AppContext{DB: db}
+	cs.accountServer = httptest.NewServer(middlewares.ContextMiddleware(controllers.GetAccountInfo, cs.context))
+	cs.transactionsServer = httptest.NewServer(middlewares.ContextMiddleware(controllers.MakeTransaction, cs.context))
+}
+
+func (cs *CSVSuite) TestTransactionsLoad() {
+	log.Println("Running tests from endpoints:", cs.accountServer.URL, cs.transactionsServer.URL)
+	RunCSVTests(cs.accountServer.URL, cs.transactionsServer.URL, "transactions.csv", 3)
+}
+
+func (cs *CSVSuite) TearDownTest() {
+	log.Println("Closing test endpoints...")
+	defer cs.accountServer.Close()
+	defer cs.transactionsServer.Close()
+
+	log.Println("Cleaning up the test database")
+	t := cs.T()
+	_, err := cs.context.DB.Exec(`DELETE FROM lines`)
+	if err != nil {
+		t.Fatal("Error deleting lines:", err)
+	}
+	_, err = cs.context.DB.Exec(`DELETE FROM transactions`)
+	if err != nil {
+		t.Fatal("Error deleting transactions:", err)
+	}
+	_, err = cs.context.DB.Exec(`DELETE FROM accounts`)
+	if err != nil {
+		t.Fatal("Error deleting accounts:", err)
+	}
+}
+
+func TestCSVSuite(t *testing.T) {
+	suite.Run(t, new(CSVSuite))
 }
