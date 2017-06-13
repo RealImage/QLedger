@@ -49,10 +49,10 @@ For transactions, the `data` can be available either while creation or can later
 
 Both transactions and accounts can be updated multiple times with `data`. The key value pairs are always merged with the existing items in the `data`.
 
-A typical `tags` object will be as follows:
+A typical `data` object will be as follows:
 ```
 {
-  "tags": {
+  "data": {
     "k1": "",
     "k2": "strval",
     "k3": ["av1", "av2", "av3"],
@@ -68,7 +68,7 @@ A typical `tags` object will be as follows:
 ```
 > The key value formats here are just samples and they can be any valid JSON object.
 
-The transactions can be tagged while creation as follows:
+The transactions can be created with `data` as follows:
 #### POST `/v1/transactions`
 ```
 {
@@ -97,9 +97,9 @@ The transactions can be tagged while creation as follows:
 }
 ```
 
-The transactions or accounts can be re-tagged using API `POST /v1/:model/:itemID/tags`.
+The transactions or accounts can be updated with `data` using endpoint `POST /v1/:model/:itemID/data`.
 
-The transaction with ID `abcd1234` can be re-tagged as follows:
+The transaction with ID `abcd1234` is updated with `data` as follows:
 #### POST `/v1/transactions/abcd1234/data`
 ```
 {
@@ -117,7 +117,7 @@ The transaction with ID `abcd1234` can be re-tagged as follows:
 }
 ```
 
-So after the above initial tagging and re-tagging, the tags list of transaction `abcd1234` will look as follows:
+So after the above initial creation and update, the `data` of transaction `abcd1234` will look as follows:
 
 ```
 {
