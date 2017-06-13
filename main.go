@@ -10,7 +10,9 @@ import (
 	"github.com/RealImage/QLedger/controllers"
 	"github.com/RealImage/QLedger/middlewares"
 	"github.com/julienschmidt/httprouter"
-	_ "github.com/lib/pq"
+	"github.com/mattes/migrate"
+	"github.com/mattes/migrate/database/postgres"
+	_ "github.com/mattes/migrate/source/file"
 )
 
 func main() {
@@ -19,6 +21,17 @@ func main() {
 		log.Panic("Unable to connect to Database:", err)
 	}
 	log.Println("Successfully established connection to database.")
+
+	log.Println("Starting db schema migration...")
+	driver, _ := postgres.WithInstance(db, &postgres.Config{})
+	m, _ := migrate.NewWithDatabaseInstance(
+		"file://migrations/postgres",
+		"postgres", driver)
+	version, _, _ := m.Version()
+	log.Println("Current schema version:", version)
+	m.Up()
+	version, _, _ = m.Version()
+	log.Println("Migrated schema version:", version)
 	appContext := &ledgerContext.AppContext{DB: db}
 
 	router := httprouter.New()

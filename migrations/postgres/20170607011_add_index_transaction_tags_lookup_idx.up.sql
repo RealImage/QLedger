@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX transaction_tags_lookup_idx ON transaction_tags USING btree (value, key, transaction_id);
