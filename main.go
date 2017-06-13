@@ -29,7 +29,10 @@ func main() {
 		"postgres", driver)
 	version, _, _ := m.Version()
 	log.Println("Current schema version:", version)
-	m.Up()
+	err = m.Up()
+	if err != nil {
+		log.Println("Error while migration:", err)
+	}
 	version, _, _ = m.Version()
 	log.Println("Migrated schema version:", version)
 	appContext := &ledgerContext.AppContext{DB: db}

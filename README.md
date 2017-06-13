@@ -47,7 +47,7 @@ Transactions and accounts can have arbitrary number of key-value pairs maintaine
 
 For transactions, the `data` can be available either while creation or can later be added. But for the accounts it can be updated with `data` only after it is created through a transaction.
 
-Both transactions and accounts can be updated multiple times with `data`. The key value pairs are always merged with the existing items in the `data`.
+Both transactions and accounts can be updated multiple times with `data`. The existing `data` is always overwritten with the new `data` value.
 
 A typical `data` object will be as follows:
 ```
@@ -141,14 +141,15 @@ So after the above initial creation and update, the `data` of transaction `abcd1
 The transactions and accounts can be filtered from the endpoint `GET /v1/:model/search` using the following query primitives.
 
 - `terms` query
-Find rows where atleast one of the field with the specified value exists.
+Find rows where atleast one of the `terms` with the specified key-value pairs exists.
 
 - `range` query
-Find rows where atleast one of the field with the specified range exists.
+Find rows where atleast one of the item with the specified `range` exists.
 
 - `exists` query
 Find rows where atleast one of the fields exists with any value.
 
+> The `/v1/:model/search` follows a subset of [Elasticsearch querying](https://www.elastic.co/guide/en/elasticsearch/reference/current/term-level-queries.html) format.
 
 Here are samples how transactions can be filtered.
 
@@ -157,28 +158,35 @@ Here are samples how transactions can be filtered.
 {
   "query": {
     "terms": [
-      {"status": "completed"},
+      {"status": "completed", "active": true},
       {"months": ["jan", "feb", "mar"]},
       {
         "products": {
           "qw": {
               "coupons": "x001"
           }
+        },
+        "charge": 2000
       },
       {
         "products": {
           "qw": {
               "coupons": "y001"
           }
+        },
+        "charge": 2000
       }
     ],
     "range": [
       {"date": {"gte": "2017-01-01","lte": "2017-06-31"}},
-      {"charge": {"gt": 2000}}
+      {
+        "charge": {"gt": 2000},
+        "year": {"gt": 2014}
+      }
     ],
     "exists": [
-      {"field": "christmas-offer"},
-      {"field": "hold-on"}
+      {"field": ["christmas-offer", "hold-on"]},
+      {"field": "charge"}
     ]
   }
 }
