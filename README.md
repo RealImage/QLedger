@@ -146,9 +146,6 @@ Find rows where atleast one of the `terms` with the specified key-value pairs ex
 - `range` query
 Find rows where atleast one of the item with the specified `range` exists.
 
-- `exists` query
-Find rows where atleast one of the fields exists with any value.
-
 > The `/v1/:model/search` follows a subset of [Elasticsearch querying](https://www.elastic.co/guide/en/elasticsearch/reference/current/term-level-queries.html) format.
 
 Here are samples how transactions can be filtered.
@@ -158,6 +155,7 @@ Here are samples how transactions can be filtered.
 {
   "query": {
     "terms": [
+      {"christmas-offer": ""},
       {"status": "completed", "active": true},
       {"months": ["jan", "feb", "mar"]},
       {
@@ -183,10 +181,6 @@ Here are samples how transactions can be filtered.
         "charge": {"gt": 2000},
         "year": {"gt": 2014}
       }
-    ],
-    "exists": [
-      {"field": ["christmas-offer", "hold-on"]},
-      {"field": "charge"}
     ]
   }
 }
