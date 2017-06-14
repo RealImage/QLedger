@@ -2,6 +2,7 @@ package models
 
 import (
 	"database/sql"
+	"encoding/json"
 	"log"
 	"reflect"
 	"time"
@@ -10,7 +11,8 @@ import (
 )
 
 type Transaction struct {
-	ID    string `json:"id"`
+	ID    string                 `json:"id"`
+	Data  map[string]interface{} `json:"data,omitempty"`
 	Lines []*TransactionLine
 }
 
@@ -96,7 +98,15 @@ func (tdb *TransactionDB) Transact(t *Transaction) bool {
 	}
 
 	// Add transaction
-	_, err = txn.Exec("INSERT INTO transactions (id, timestamp) VALUES ($1, $2)", t.ID, time.Now().UTC())
+	data, err := json.Marshal(t.Data)
+	if err != nil {
+		return handleTransactionError(txn, errors.Wrap(err, "transaction data parse error"))
+	}
+	transactionData := "{}"
+	if data == nil {
+		transactionData = string(data)
+	}
+	_, err = txn.Exec("INSERT INTO transactions (id, timestamp, data) VALUES ($1, $2, $3)", t.ID, time.Now().UTC(), transactionData)
 	if err != nil {
 		return handleTransactionError(txn, errors.Wrap(err, "insert transaction failed"))
 	}
