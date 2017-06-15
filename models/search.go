@@ -23,14 +23,15 @@ func NewSearchEngine(db *sql.DB, namespace string) (*SearchEngine, ledgerError.A
 }
 
 func (engine *SearchEngine) Query(q string) (interface{}, ledgerError.ApplicationError) {
-	searchQuery, err := NewSearchQuery(q)
+	rawQuery, err := NewSearchRawQuery(q)
 	if err != nil {
 		return nil, err
 	}
 
-	sqlQuery := searchQuery.ToSQL(engine.namespace)
-	log.Println("sqlQuery:", sqlQuery)
-	rows, derr := engine.db.Query(sqlQuery)
+	sqlQuery := rawQuery.ToSQLQuery(engine.namespace)
+	log.Println("sqlQuery SQL:", sqlQuery.sql)
+	log.Println("sqlQuery args:", sqlQuery.args)
+	rows, derr := engine.db.Query(sqlQuery.sql, sqlQuery.args...)
 	if derr != nil {
 		return nil, DBError(derr)
 	}
@@ -61,32 +62,41 @@ func (engine *SearchEngine) Query(q string) (interface{}, ledgerError.Applicatio
 	return nil, nil
 }
 
-type SearchQuery struct {
+type SearchRawQuery struct {
 	Query struct {
 		Terms      []map[string]interface{} `json:"terms"`
 		RangeItems []map[string]interface{} `json:"range"`
 	} `json:"query"`
 }
 
-func NewSearchQuery(q string) (*SearchQuery, ledgerError.ApplicationError) {
-	var searchQuery *SearchQuery
-	log.Println("q:", q)
-	err := json.Unmarshal([]byte(q), &searchQuery)
+type SearchSQLQuery struct {
+	sql  string
+	args []interface{}
+}
+
+func NewSearchRawQuery(q string) (*SearchRawQuery, ledgerError.ApplicationError) {
+	var rawQuery *SearchRawQuery
+	err := json.Unmarshal([]byte(q), &rawQuery)
 	if err != nil {
 		return nil, SearchQueryInvalidError(err)
 	}
-	return searchQuery, nil
+	return rawQuery, nil
 }
 
-func (searchQuery *SearchQuery) ToSQL(namespace string) string {
-	var sqlQuery string
+func (rawQuery *SearchRawQuery) ToSQLQuery(namespace string) *SearchSQLQuery {
+	var sql string
+	var args []interface{}
+
 	switch namespace {
 	case "accounts":
-		sqlQuery = "SELECT id, balance FROM accounts"
+		sql = "SELECT id, balance FROM accounts"
 	case "transactions":
-		sqlQuery = "SELECT id, timestamp FROM transactions"
+		sql = "SELECT id, timestamp FROM transactions"
 	default:
-		return ""
+		return nil
+	}
+	if len(rawQuery.Query.Terms) == 0 && len(rawQuery.Query.RangeItems) == 0 {
+		return &SearchSQLQuery{sql: sql}
 	}
 
 	jsonify := func(input interface{}) string {
@@ -107,11 +117,7 @@ func (searchQuery *SearchQuery) ToSQL(namespace string) string {
 		return "="
 	}
 
-	if len(searchQuery.Query.Terms) == 0 && len(searchQuery.Query.RangeItems) == 0 {
-		return sqlQuery
-	}
 	var where []string
-
 	// Term queries
 	/*
 		-- string value
@@ -125,14 +131,16 @@ func (searchQuery *SearchQuery) ToSQL(namespace string) string {
 		-- object value
 		SELECT id FROM transactions WHERE data->'products' @> '{"qw":{"coupons": ["x001"]}}'::jsonb;
 	*/
-	for _, term := range searchQuery.Query.Terms {
+	for _, term := range rawQuery.Query.Terms {
 		var conditions []string
 		for key, value := range term {
 			conditions = append(
 				conditions,
-				fmt.Sprintf("data->'%s' @> '%s'", key, jsonify(value)))
+				fmt.Sprintf("data->'%s' @> $%d::jsonb", key, len(args)+1),
+			)
+			args = append(args, jsonify(value))
 		}
-		where = append(where, strings.Join(conditions, " AND "))
+		where = append(where, "("+strings.Join(conditions, " AND ")+")")
 	}
 	// Range queries
 	/*
@@ -141,7 +149,7 @@ func (searchQuery *SearchQuery) ToSQL(namespace string) string {
 		-- other values
 		SELECT id, data->'date' FROM transactions WHERE data->>'date' >= '2017-01-01' AND data->>'date' < '2017-06-01';
 	*/
-	for _, rangeItem := range searchQuery.Query.RangeItems {
+	for _, rangeItem := range rawQuery.Query.RangeItems {
 		var conditions []string
 		for key, comparison := range rangeItem {
 			compItem, _ := comparison.(map[string]interface{})
@@ -150,17 +158,19 @@ func (searchQuery *SearchQuery) ToSQL(namespace string) string {
 				switch value.(type) {
 				case int, int8, int16, int32, int64, float32, float64:
 					condn = fmt.Sprintf(
-						"data->>'%s' ~ '^([0-9]+[.]?[0-9]*|[.][0-9]+)$' AND (data->>'%s')::float %s %v",
-						key, key, sqlComparisonOp(op), value)
+						"data->>'%s' ~ '^([0-9]+[.]?[0-9]*|[.][0-9]+)$' AND (data->>'%s')::float %s $%d",
+						key, key, sqlComparisonOp(op), len(args)+1,
+					)
 				default:
-					condn = fmt.Sprintf("data->>'%s' %s '%s'", key, sqlComparisonOp(op), value)
+					condn = fmt.Sprintf("data->>'%s' %s $%d", key, sqlComparisonOp(op), len(args)+1)
 				}
 				conditions = append(conditions, condn)
+				args = append(args, value)
 			}
 		}
-		where = append(where, strings.Join(conditions, " AND "))
+		where = append(where, "("+strings.Join(conditions, " AND ")+")")
 	}
-	sqlQuery = sqlQuery + " WHERE " + strings.Join(where, " OR ")
+	sql = sql + " WHERE " + strings.Join(where, " OR ")
 
-	return sqlQuery
+	return &SearchSQLQuery{sql: sql, args: args}
 }

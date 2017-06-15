@@ -36,6 +36,7 @@ func Search(w http.ResponseWriter, r *http.Request, params httprouter.Params, co
 		return
 	}
 	query := string(body)
+	log.Println("Query:", query)
 
 	results, err := engine.Query(query)
 	if err != nil {
