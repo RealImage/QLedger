@@ -15,7 +15,7 @@ import (
 func Search(w http.ResponseWriter, r *http.Request, params httprouter.Params, context *ledgerContext.AppContext) {
 	namespace := params.ByName("namespace")
 
-	engine, err := models.NewSearchEngine(namespace)
+	engine, err := models.NewSearchEngine(context.DB, namespace)
 	if err != nil {
 		log.Println("Error initiating search:", err)
 		switch err.ErrorCode() {
@@ -57,5 +57,5 @@ func Search(w http.ResponseWriter, r *http.Request, params httprouter.Params, co
 		return
 	}
 	fmt.Fprint(w, string(data))
-	w.WriteHeader(http.StatusOK)
+	return
 }

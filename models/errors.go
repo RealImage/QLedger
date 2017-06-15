@@ -17,3 +17,10 @@ func SearchQueryInvalidError(err error) errors.ApplicationError {
 		Message: "Invalid search query: " + err.Error(),
 	}
 }
+
+func DBError(err error) errors.ApplicationError {
+	return &errors.BaseApplicationError{
+		Code:    "db.error",
+		Message: "DB Error: " + err.Error(),
+	}
+}
