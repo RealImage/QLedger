@@ -138,7 +138,7 @@ So after the above initial creation and update, the `data` of transaction `abcd1
 }
 ```
 
-The transactions and accounts can be filtered from the endpoint `GET /v1/:model/search` using the following query primitives.
+The transactions and accounts can be filtered from the endpoint `GET /v1/search/:namespace` using the following query primitives.
 
 - `terms` query
 Find rows where atleast one of the `terms` with the specified key-value pairs exists.
@@ -146,11 +146,11 @@ Find rows where atleast one of the `terms` with the specified key-value pairs ex
 - `range` query
 Find rows where atleast one of the item with the specified `range` exists.
 
-> The `/v1/:model/search` follows a subset of [Elasticsearch querying](https://www.elastic.co/guide/en/elasticsearch/reference/current/term-level-queries.html) format.
+> The `/v1/search/:namespace` follows a subset of [Elasticsearch querying](https://www.elastic.co/guide/en/elasticsearch/reference/current/term-level-queries.html) format.
 
 Here are samples how transactions can be filtered.
 
-#### POST `/v1/transactions/search`
+#### POST `/v1/search/transactions`
 ```
 {
   "query": {
