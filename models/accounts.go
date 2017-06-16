@@ -6,8 +6,9 @@ import (
 )
 
 type Account struct {
-	Id      string `json:"id"`
-	Balance int    `json:"balance"`
+	Id      string                 `json:"id"`
+	Balance int                    `json:"balance"`
+	Data    map[string]interface{} `json:"data"`
 }
 
 type AccountDB struct {

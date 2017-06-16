@@ -15,6 +15,17 @@ type SearchEngine struct {
 	namespace string
 }
 
+type TransactionResult struct {
+	ID        string          `json:"id"`
+	Timestamp string          `json:"timestamp"`
+	Data      json.RawMessage `json:"data"`
+}
+
+type AccountResult struct {
+	Id   string          `json:"id"`
+	Data json.RawMessage `json:"data"`
+}
+
 func NewSearchEngine(db *sql.DB, namespace string) (*SearchEngine, ledgerError.ApplicationError) {
 	if !(namespace == "accounts" || namespace == "transactions") {
 		return nil, SearchNamespaceInvalidError(namespace)
@@ -39,20 +50,20 @@ func (engine *SearchEngine) Query(q string) (interface{}, ledgerError.Applicatio
 
 	switch engine.namespace {
 	case "accounts":
-		var accounts []*Account
+		accounts := make([]*AccountResult, 0)
 		for rows.Next() {
-			acc := &Account{}
-			if err := rows.Scan(&acc.Id, &acc.Balance); err != nil {
+			acc := &AccountResult{}
+			if err := rows.Scan(&acc.Id, &acc.Data); err != nil {
 				return nil, DBError(err)
 			}
 			accounts = append(accounts, acc)
 		}
 		return accounts, nil
 	case "transactions":
-		var transactions []*Transaction
+		transactions := make([]*TransactionResult, 0)
 		for rows.Next() {
-			txn := &Transaction{}
-			if err := rows.Scan(&txn.ID, &txn.Timestamp); err != nil {
+			txn := &TransactionResult{}
+			if err := rows.Scan(&txn.ID, &txn.Timestamp, &txn.Data); err != nil {
 				return nil, DBError(err)
 			}
 			transactions = append(transactions, txn)
@@ -89,9 +100,9 @@ func (rawQuery *SearchRawQuery) ToSQLQuery(namespace string) *SearchSQLQuery {
 
 	switch namespace {
 	case "accounts":
-		sql = "SELECT id, balance FROM accounts"
+		sql = "SELECT id, data FROM accounts"
 	case "transactions":
-		sql = "SELECT id, timestamp FROM transactions"
+		sql = "SELECT id, timestamp, data FROM transactions"
 	default:
 		return nil
 	}

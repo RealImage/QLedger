@@ -12,7 +12,7 @@ import (
 
 type Transaction struct {
 	ID        string                 `json:"id"`
-	Data      map[string]interface{} `json:"data,omitempty"`
+	Data      map[string]interface{} `json:"data"`
 	Timestamp string                 `json:"timestamp"`
 	Lines     []*TransactionLine
 }
