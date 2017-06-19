@@ -40,7 +40,7 @@ func main() {
 	router := httprouter.New()
 
 	// Create accounts and transactions
-	// router.HandlerFunc("POST", "/v1/accounts", middlewares.ContextMiddleware(controllers.AddAccount, appContext))
+	router.HandlerFunc("POST", "/v1/accounts", middlewares.ContextMiddleware(controllers.AddAccount, appContext))
 	router.HandlerFunc("POST", "/v1/transactions", middlewares.ContextMiddleware(controllers.MakeTransaction, appContext))
 
 	// Read or search accounts and transactions
@@ -50,8 +50,8 @@ func main() {
 	router.HandlerFunc("POST", "/v1/transactions/_search", middlewares.ContextMiddleware(controllers.GetTransactions, appContext))
 
 	// Update data of accounts and transactions
-	// router.HandlerFunc("PUT", "/v1/accounts", middlewares.ContextMiddleware(controllers.UpdateAccount, appContext))
-	// router.HandlerFunc("PUT", "/v1/transactions", middlewares.ContextMiddleware(controllers.UpdateTransaction, appContext))
+	router.HandlerFunc("PUT", "/v1/accounts", middlewares.ContextMiddleware(controllers.UpdateAccount, appContext))
+	router.HandlerFunc("PUT", "/v1/transactions", middlewares.ContextMiddleware(controllers.UpdateTransaction, appContext))
 
 	port := "7000"
 	if lp := os.Getenv("PORT"); lp != "" {

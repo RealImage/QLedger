@@ -24,3 +24,10 @@ func DBError(err error) errors.ApplicationError {
 		Message: "DB Error: " + err.Error(),
 	}
 }
+
+func JSONError(err error) errors.ApplicationError {
+	return &errors.BaseApplicationError{
+		Code:    "json.error",
+		Message: "JSON Error: " + err.Error(),
+	}
+}

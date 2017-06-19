@@ -64,10 +64,9 @@ CREATE INDEX transactions_data_idx ON transactions USING gin (data jsonb_path_op
 CREATE RULE "_RETURN" AS
     ON SELECT TO current_balances DO INSTEAD  SELECT accounts.id,
     accounts.data,
-    sum(lines.delta) AS balance
-   FROM accounts,
-    lines
-  WHERE ((accounts.id)::text = (lines.account_id)::text)
+    COALESCE(sum(lines.delta), (0)::bigint) AS balance
+   FROM (accounts
+     LEFT JOIN lines ON (((accounts.id)::text = (lines.account_id)::text)))
   GROUP BY accounts.id;
 ALTER TABLE ONLY lines
     ADD CONSTRAINT lines_account_id_fkey FOREIGN KEY (account_id) REFERENCES accounts(id);
