@@ -88,7 +88,7 @@ The transactions can be created with `data` as follows:
     "status": "completed",
     "products": {
       "qw": {
-          "coupons": ["x001"]
+          "tax": 14.5
       }
     },
     "months": ["jan", "feb"],
@@ -97,30 +97,13 @@ The transactions can be created with `data` as follows:
 }
 ```
 
-The transactions or accounts can be updated with `data` using endpoint `POST /v1/:model/:itemID/data`.
+The transactions or accounts can be updated with `data` using endpoints `PUT /v1/transactions` and `PUT /v1/accounts`
 
 The transaction with ID `abcd1234` is updated with `data` as follows:
-#### POST `/v1/transactions/abcd1234/data`
+#### PUT `/v1/transactions`
 ```
 {
-  "data": {
-    "hold-on": "",
-    "active": true,
-    "products": {
-      "qw": {
-          "coupons": ["y001", "z001"]
-      }
-    },
-    "months": ["jan", "mar"],
-    "charge": 2000
-  }
-}
-```
-
-So after the above initial creation and update, the `data` of transaction `abcd1234` will look as follows:
-
-```
-{
+  "id": "abcd1234",
   "data": {
     "christmas-offer": "",
     "hold-on": "",
@@ -128,7 +111,7 @@ So after the above initial creation and update, the `data` of transaction `abcd1
     "active": true,
     "products": {
       "qw": {
-          "coupons": ["x001", "y001", "z001"]
+          "tax": 18.0
       }
     },
     "months": ["jan", "feb", "mar"],
@@ -138,50 +121,70 @@ So after the above initial creation and update, the `data` of transaction `abcd1
 }
 ```
 
-The transactions and accounts can be filtered from the endpoint `GET /v1/search/:namespace` using the following query primitives.
+The transactions and accounts can be filtered from the endpoints `GET /v1/transactions` and `GET /v1/accounts` with the following query primitives in the payload.
+
+- `id` query
+Find row which exactly matches the specified `id`
+
+Example: The following query matches a single transaction with ID `txn1`
+`GET /v1/transactions`
+```
+{
+  "query": {
+    "id": "txn1"
+  }
+}
+```
 
 - `terms` query
-Find rows where atleast one of the `terms` with the specified key-value pairs exists.
+Find rows where atleast one of the `terms` with all the specified key-value pairs exists.
 
-- `range` query
-Find rows where atleast one of the item with the specified `range` exists.
+Example: The following query matches all transactions which satisfies atleast one of the following terms:
+- `status` is `completed` AND `active` is `true`
+-  Values `jan`, `feb` AND `mar` in `months` array
+-  Subset `{"qw": {"tax": 18.0}}` in `products` object
 
-> The `/v1/search/:namespace` follows a subset of [Elasticsearch querying](https://www.elastic.co/guide/en/elasticsearch/reference/current/term-level-queries.html) format.
-
-Here are samples how transactions can be filtered.
-
-#### POST `/v1/search/transactions`
+`GET /v1/transactions`
 ```
 {
   "query": {
     "terms": [
-      {"christmas-offer": ""},
       {"status": "completed", "active": true},
       {"months": ["jan", "feb", "mar"]},
       {
         "products": {
           "qw": {
-              "coupons": "x001"
+              "tax": 18.0
           }
-        },
-        "charge": 2000
-      },
-      {
-        "products": {
-          "qw": {
-              "coupons": "y001"
-          }
-        },
-        "charge": 2000
-      }
-    ],
-    "range": [
-      {"date": {"gte": "2017-01-01","lte": "2017-06-31"}},
-      {
-        "charge": {"gt": 2000},
-        "year": {"gt": 2014}
+        }
       }
     ]
   }
 }
 ```
+
+- `range` query
+Find rows where atleast one of the `range`  condition is satisfied.
+
+Example: The following query matches all transactions which satisfies atleast one of the following `range` condition:
+
+- `charge >= 2000` AND `charge <= 4000`
+- `date > '2017-01-01'` AND `date < '2017-01-31'`
+
+`GET /v1/transactions`
+```
+{
+  "query": {
+    "range": [
+      {"charge": {"gte": 2000, "lte": 4000}},
+      {"date": {"gt": "2017-01-01","lt": "2017-06-31"}}
+    ]
+  }
+}
+```
+
+**Note:**
+
+- The `GET /v1/transactions` and `GET /v1/accounts` follows a subset of [Elasticsearch querying](https://www.elastic.co/guide/en/elasticsearch/reference/current/term-level-queries.html) format.
+
+-  Clients those doesn't support passing payload in the `GET` can use the `POST` alternate endpoints: `POST /v1/transactions/_search` and `POST /v1/accounts/_search`
