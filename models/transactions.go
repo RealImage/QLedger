@@ -14,7 +14,7 @@ type Transaction struct {
 	ID        string                 `json:"id"`
 	Data      map[string]interface{} `json:"data"`
 	Timestamp string                 `json:"timestamp"`
-	Lines     []*TransactionLine
+	Lines     []*TransactionLine     `json:"lines"`
 }
 
 type TransactionLine struct {
@@ -104,7 +104,7 @@ func (tdb *TransactionDB) Transact(t *Transaction) bool {
 		return handleTransactionError(txn, errors.Wrap(err, "transaction data parse error"))
 	}
 	transactionData := "{}"
-	if data == nil {
+	if data != nil {
 		transactionData = string(data)
 	}
 	_, err = txn.Exec("INSERT INTO transactions (id, timestamp, data) VALUES ($1, $2, $3)", t.ID, time.Now().UTC(), transactionData)

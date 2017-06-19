@@ -22,8 +22,9 @@ type TransactionResult struct {
 }
 
 type AccountResult struct {
-	Id   string          `json:"id"`
-	Data json.RawMessage `json:"data"`
+	Id      string          `json:"id"`
+	Balance int             `json:"balance"`
+	Data    json.RawMessage `json:"data"`
 }
 
 func NewSearchEngine(db *sql.DB, namespace string) (*SearchEngine, ledgerError.ApplicationError) {
@@ -53,7 +54,7 @@ func (engine *SearchEngine) Query(q string) (interface{}, ledgerError.Applicatio
 		accounts := make([]*AccountResult, 0)
 		for rows.Next() {
 			acc := &AccountResult{}
-			if err := rows.Scan(&acc.Id, &acc.Data); err != nil {
+			if err := rows.Scan(&acc.Id, &acc.Balance, &acc.Data); err != nil {
 				return nil, DBError(err)
 			}
 			accounts = append(accounts, acc)
@@ -100,7 +101,7 @@ func (rawQuery *SearchRawQuery) ToSQLQuery(namespace string) *SearchSQLQuery {
 
 	switch namespace {
 	case "accounts":
-		sql = "SELECT id, data FROM accounts"
+		sql = "SELECT id, balance, data FROM current_balances"
 	case "transactions":
 		sql = "SELECT id, timestamp, data FROM transactions"
 	default:
