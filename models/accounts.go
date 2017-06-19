@@ -18,7 +18,7 @@ type AccountDB struct {
 func (adb *AccountDB) GetByID(id string) *Account {
 	account := &Account{Id: id}
 
-	err := adb.DB.QueryRow("SELECT balance FROM current_balances WHERE account_id=$1", &id).Scan(&account.Balance)
+	err := adb.DB.QueryRow("SELECT balance FROM current_balances WHERE id=$1", &id).Scan(&account.Balance)
 	switch {
 	case err == sql.ErrNoRows:
 		account.Balance = 0

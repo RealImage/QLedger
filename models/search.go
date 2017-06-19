@@ -22,7 +22,7 @@ type TransactionResult struct {
 }
 
 type AccountResult struct {
-	Id      string          `json:"id"`
+	ID      string          `json:"id"`
 	Balance int             `json:"balance"`
 	Data    json.RawMessage `json:"data"`
 }
@@ -54,7 +54,7 @@ func (engine *SearchEngine) Query(q string) (interface{}, ledgerError.Applicatio
 		accounts := make([]*AccountResult, 0)
 		for rows.Next() {
 			acc := &AccountResult{}
-			if err := rows.Scan(&acc.Id, &acc.Balance, &acc.Data); err != nil {
+			if err := rows.Scan(&acc.ID, &acc.Balance, &acc.Data); err != nil {
 				return nil, DBError(err)
 			}
 			accounts = append(accounts, acc)
@@ -76,6 +76,7 @@ func (engine *SearchEngine) Query(q string) (interface{}, ledgerError.Applicatio
 
 type SearchRawQuery struct {
 	Query struct {
+		ID         string                   `json:"id"`
 		Terms      []map[string]interface{} `json:"terms"`
 		RangeItems []map[string]interface{} `json:"range"`
 	} `json:"query"`
@@ -106,6 +107,10 @@ func (rawQuery *SearchRawQuery) ToSQLQuery(namespace string) *SearchSQLQuery {
 		sql = "SELECT id, timestamp, data FROM transactions"
 	default:
 		return nil
+	}
+	if len(rawQuery.Query.ID) != 0 {
+		sql = sql + " WHERE id = $1"
+		return &SearchSQLQuery{sql: sql, args: []interface{}{rawQuery.Query.ID}}
 	}
 	if len(rawQuery.Query.Terms) == 0 && len(rawQuery.Query.RangeItems) == 0 {
 		return &SearchSQLQuery{sql: sql}
