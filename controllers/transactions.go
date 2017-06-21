@@ -67,13 +67,13 @@ func MakeTransaction(w http.ResponseWriter, r *http.Request, context *ledgerCont
 }
 
 func GetTransactions(w http.ResponseWriter, r *http.Request, context *ledgerContext.AppContext) {
+	defer r.Body.Close()
 	engine, err := models.NewSearchEngine(context.DB, "transactions")
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	defer r.Body.Close()
 	body, rerr := ioutil.ReadAll(r.Body)
 	if rerr != nil {
 		log.Println("Error reading payload:", rerr)
@@ -97,7 +97,7 @@ func GetTransactions(w http.ResponseWriter, r *http.Request, context *ledgerCont
 	}
 
 	data, jerr := json.Marshal(results)
-	if err != nil {
+	if jerr != nil {
 		log.Println("Error while parsing results:", jerr)
 		w.WriteHeader(http.StatusInternalServerError)
 		return

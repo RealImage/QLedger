@@ -32,20 +32,10 @@ All accounts and transactions are identified by a string identifier, which also 
 ```
 > Transactions with a total delta not equal to zero will result in a `400 BAD REQUEST` error.
 
-#### GET `/v1/accounts?id=alice`
-```
-{
-  "id": "alice",
-  "balance": -100
-}
-```
-
 
 #### Metadata for Querying and Reports
 
 Transactions and accounts can have arbitrary number of key-value pairs maintained as a single JSON `data` which helps in grouping and filtering them by one or more criteria.
-
-For transactions, the `data` can be available either while creation or can later be added. But for the accounts it can be updated with `data` only after it is created through a transaction.
 
 Both transactions and accounts can be updated multiple times with `data`. The existing `data` is always overwritten with the new `data` value.
 
@@ -69,7 +59,7 @@ A typical `data` object will be as follows:
 > The key value formats here are just samples and they can be any valid JSON object.
 
 The transactions can be created with `data` as follows:
-#### POST `/v1/transactions`
+##### POST `/v1/transactions`
 ```
 {
   "id": "abcd1234",
@@ -97,10 +87,22 @@ The transactions can be created with `data` as follows:
 }
 ```
 
+The accounts can be created with `data` as follows:
+##### POST `/v1/accounts`
+```
+{
+  "id": "alice",
+  "data": {
+    "product": "qw",
+    "date": "2017-01-01"
+  }
+}
+```
+
 The transactions or accounts can be updated with `data` using endpoints `PUT /v1/transactions` and `PUT /v1/accounts`
 
 The transaction with ID `abcd1234` is updated with `data` as follows:
-#### PUT `/v1/transactions`
+##### PUT `/v1/transactions`
 ```
 {
   "id": "abcd1234",
@@ -121,9 +123,11 @@ The transaction with ID `abcd1234` is updated with `data` as follows:
 }
 ```
 
+##### GET `/v1/transactions`
 The transactions and accounts can be filtered from the endpoints `GET /v1/transactions` and `GET /v1/accounts` with the following query primitives in the payload.
 
-- `id` query
+**- `id` query**
+
 Find row which exactly matches the specified `id`
 
 Example: The following query matches a single transaction with ID `txn1`
@@ -136,7 +140,8 @@ Example: The following query matches a single transaction with ID `txn1`
 }
 ```
 
-- `terms` query
+**- `terms` query**
+
 Find rows where atleast one of the `terms` with all the specified key-value pairs exists.
 
 Example: The following query matches all transactions which satisfies atleast one of the following terms:
@@ -163,7 +168,8 @@ Example: The following query matches all transactions which satisfies atleast on
 }
 ```
 
-- `range` query
+**- `range` query**
+
 Find rows where atleast one of the `range`  condition is satisfied.
 
 Example: The following query matches all transactions which satisfies atleast one of the following `range` condition:

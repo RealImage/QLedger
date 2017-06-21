@@ -12,13 +12,13 @@ import (
 )
 
 func GetAccounts(w http.ResponseWriter, r *http.Request, context *ledgerContext.AppContext) {
+	defer r.Body.Close()
 	engine, err := models.NewSearchEngine(context.DB, "accounts")
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	defer r.Body.Close()
 	body, rerr := ioutil.ReadAll(r.Body)
 	if rerr != nil {
 		log.Println("Error reading payload:", rerr)
@@ -42,7 +42,7 @@ func GetAccounts(w http.ResponseWriter, r *http.Request, context *ledgerContext.
 	}
 
 	data, jerr := json.Marshal(results)
-	if err != nil {
+	if jerr != nil {
 		log.Println("Error while parsing results:", jerr)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
