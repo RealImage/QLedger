@@ -18,7 +18,7 @@ type AccountDB struct {
 	DB *sql.DB `json:"-"`
 }
 
-func (adb *AccountDB) GetByID(id string) *Account {
+func (adb *AccountDB) GetByID(id string) (*Account, ledgerError.ApplicationError) {
 	account := &Account{Id: id}
 
 	err := adb.DB.QueryRow("SELECT balance FROM current_balances WHERE id=$1", &id).Scan(&account.Balance)
@@ -26,10 +26,10 @@ func (adb *AccountDB) GetByID(id string) *Account {
 	case err == sql.ErrNoRows:
 		account.Balance = 0
 	case err != nil:
-		log.Fatal(err)
+		return nil, DBError(err)
 	}
 
-	return account
+	return account, nil
 }
 
 func (adb *AccountDB) IsExists(id string) bool {
