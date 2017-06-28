@@ -2,16 +2,20 @@ package models
 
 import (
 	"database/sql"
+	"encoding/json"
 	"log"
 	"reflect"
 	"time"
 
+	ledgerError "github.com/RealImage/QLedger/errors"
 	"github.com/pkg/errors"
 )
 
 type Transaction struct {
-	ID    string `json:"id"`
-	Lines []*TransactionLine
+	ID        string                 `json:"id"`
+	Data      map[string]interface{} `json:"data"`
+	Timestamp string                 `json:"timestamp"`
+	Lines     []*TransactionLine     `json:"lines"`
 }
 
 type TransactionLine struct {
@@ -96,7 +100,15 @@ func (tdb *TransactionDB) Transact(t *Transaction) bool {
 	}
 
 	// Add transaction
-	_, err = txn.Exec("INSERT INTO transactions (id, timestamp) VALUES ($1, $2)", t.ID, time.Now().UTC())
+	data, err := json.Marshal(t.Data)
+	if err != nil {
+		return handleTransactionError(txn, errors.Wrap(err, "transaction data parse error"))
+	}
+	transactionData := "{}"
+	if t.Data != nil && data != nil {
+		transactionData = string(data)
+	}
+	_, err = txn.Exec("INSERT INTO transactions (id, timestamp, data) VALUES ($1, $2, $3)", t.ID, time.Now().UTC(), transactionData)
 	if err != nil {
 		return handleTransactionError(txn, errors.Wrap(err, "insert transaction failed"))
 	}
@@ -116,4 +128,22 @@ func (tdb *TransactionDB) Transact(t *Transaction) bool {
 	}
 
 	return true
+}
+
+func (tdb *TransactionDB) UpdateTransaction(t *Transaction) ledgerError.ApplicationError {
+	data, jerr := json.Marshal(t.Data)
+	if jerr != nil {
+		return JSONError(jerr)
+	}
+	tData := "{}"
+	if t.Data != nil && data != nil {
+		tData = string(data)
+	}
+
+	sql := "UPDATE transactions SET data = $1 WHERE id = $2"
+	_, derr := tdb.DB.Exec(sql, tData, t.ID)
+	if derr != nil {
+		return DBError(derr)
+	}
+	return nil
 }

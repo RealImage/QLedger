@@ -32,17 +32,165 @@ All accounts and transactions are identified by a string identifier, which also 
 ```
 > Transactions with a total delta not equal to zero will result in a `400 BAD REQUEST` error.
 
-#### GET `/v1/accounts?id=alice`
+
+#### Metadata for Querying and Reports
+
+Transactions and accounts can have arbitrary number of key-value pairs maintained as a single JSON `data` which helps in grouping and filtering them by one or more criteria.
+
+Both transactions and accounts can be updated multiple times with `data`. The existing `data` is always overwritten with the new `data` value.
+
+A typical `data` object will be as follows:
 ```
 {
-  "id": "alice",
-  "balance": -100
+  "data": {
+    "k1": "",
+    "k2": "strval",
+    "k3": ["av1", "av2", "av3"],
+    "k4": {
+      "nest1": {
+        "nest2": "val"
+      }
+    },
+    "k5": 2017,
+    "k6": "2017-12-01"
+  }
+}
+```
+> The key value formats here are just samples and they can be any valid JSON object.
+
+The transactions can be created with `data` as follows:
+##### POST `/v1/transactions`
+```
+{
+  "id": "abcd1234",
+  "lines": [
+    {
+      "account": "alice",
+      "delta": -100
+    },
+    {
+      "account": "bob",
+      "delta": 100
+    }
+  ],
+  "data": {
+    "christmas-offer": "",
+    "status": "completed",
+    "products": {
+      "qw": {
+          "tax": 14.5
+      }
+    },
+    "months": ["jan", "feb"],
+    "date": "2017-01-01"
+  }
 }
 ```
 
-### Roadmap
+The accounts can be created with `data` as follows:
+##### POST `/v1/accounts`
+```
+{
+  "id": "alice",
+  "data": {
+    "product": "qw",
+    "date": "2017-01-01"
+  }
+}
+```
 
-#### Metadata for Querying and Reports
-Both accounts and transactions can be tagged with an arbitrary number of key-value pairs. There is no enforcement as to the nature of the keys or values, but simple ASCII strings are recommended for easy querying and reporting. 
+The transactions or accounts can be updated with `data` using endpoints `PUT /v1/transactions` and `PUT /v1/accounts`
 
-> When encoding information like dates into strings in the key-value pairs, they can be made sortable (and therefore queryable by range) by using placing the most significant bits first - like 2017-05-07T11:35:14Z for dates ([ISO 8601](https://en.wikipedia.org/wiki/ISO_8601)). While numbers are unlikely candidates for key-value storage, encoding them to be sortable / range-queryable without space-inefficient zero pading is [possible, but difficult](http://stackoverflow.com/questions/28413947/space-efficient-way-to-encode-numbers-as-sortable-strings).
+The transaction with ID `abcd1234` is updated with `data` as follows:
+##### PUT `/v1/transactions`
+```
+{
+  "id": "abcd1234",
+  "data": {
+    "christmas-offer": "",
+    "hold-on": "",
+    "status": "completed",
+    "active": true,
+    "products": {
+      "qw": {
+          "tax": 18.0
+      }
+    },
+    "months": ["jan", "feb", "mar"],
+    "date": "2017-01-01",
+    "charge": 2000
+  }
+}
+```
+
+##### GET `/v1/transactions`
+The transactions and accounts can be filtered from the endpoints `GET /v1/transactions` and `GET /v1/accounts` with the following query primitives in the payload.
+
+**- `id` query**
+
+Find row which exactly matches the specified `id`
+
+Example: The following query matches a single transaction with ID `txn1`
+`GET /v1/transactions`
+```
+{
+  "query": {
+    "id": "txn1"
+  }
+}
+```
+
+**- `terms` query**
+
+Find rows where atleast one of the `terms` with all the specified key-value pairs exists.
+
+Example: The following query matches all transactions which satisfies atleast one of the following terms:
+- `status` is `completed` AND `active` is `true`
+-  Values `jan`, `feb` AND `mar` in `months` array
+-  Subset `{"qw": {"tax": 18.0}}` in `products` object
+
+`GET /v1/transactions`
+```
+{
+  "query": {
+    "terms": [
+      {"status": "completed", "active": true},
+      {"months": ["jan", "feb", "mar"]},
+      {
+        "products": {
+          "qw": {
+              "tax": 18.0
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+**- `range` query**
+
+Find rows where atleast one of the `range`  condition is satisfied.
+
+Example: The following query matches all transactions which satisfies atleast one of the following `range` condition:
+
+- `charge >= 2000` AND `charge <= 4000`
+- `date > '2017-01-01'` AND `date < '2017-01-31'`
+
+`GET /v1/transactions`
+```
+{
+  "query": {
+    "range": [
+      {"charge": {"gte": 2000, "lte": 4000}},
+      {"date": {"gt": "2017-01-01","lt": "2017-06-31"}}
+    ]
+  }
+}
+```
+
+**Note:**
+
+- The `GET /v1/transactions` and `GET /v1/accounts` follows a subset of [Elasticsearch querying](https://www.elastic.co/guide/en/elasticsearch/reference/current/term-level-queries.html) format.
+
+-  Clients those doesn't support passing payload in the `GET` can use the `POST` alternate endpoints: `POST /v1/transactions/_search` and `POST /v1/accounts/_search`

@@ -31,16 +31,16 @@ func (ts *TransactionsModelSuite) SetupSuite() {
 func (ts *TransactionsModelSuite) TestIsValid() {
 	t := ts.T()
 
-	transaction := &Transaction {
-		ID: "t001", 
-		Lines: []*TransactionLine {
-			&TransactionLine {
-				AccountID: "a1", 
-				Delta: 100,
-			}, 
-			&TransactionLine {
-				AccountID: "a2", 
-				Delta: -100,
+	transaction := &Transaction{
+		ID: "t001",
+		Lines: []*TransactionLine{
+			&TransactionLine{
+				AccountID: "a1",
+				Delta:     100,
+			},
+			&TransactionLine{
+				AccountID: "a2",
+				Delta:     -100,
 			},
 		},
 	}
@@ -59,16 +59,16 @@ func (ts *TransactionsModelSuite) TestIsExists() {
 	exists := transactionDB.IsExists("t001")
 	assert.Equal(t, exists, false, "Transaction should not exist")
 
-	transaction := &Transaction {
-		ID: "t001", 
-		Lines: []*TransactionLine {
-			&TransactionLine {
-				AccountID: "a1", 
-				Delta: 100,
-			}, 
-			&TransactionLine {
-				AccountID: "a2", 
-				Delta: -100,
+	transaction := &Transaction{
+		ID: "t001",
+		Lines: []*TransactionLine{
+			&TransactionLine{
+				AccountID: "a1",
+				Delta:     100,
+			},
+			&TransactionLine{
+				AccountID: "a2",
+				Delta:     -100,
 			},
 		},
 	}
@@ -83,16 +83,16 @@ func (ts *TransactionsModelSuite) TestIsConflict() {
 	t := ts.T()
 
 	transactionDB := TransactionDB{DB: ts.db}
-	transaction := &Transaction {
-		ID: "t002", 
-		Lines: []*TransactionLine {
-			&TransactionLine {
-				AccountID: "a1", 
-				Delta: 100,
-			}, 
-			&TransactionLine {
-				AccountID: "a2", 
-				Delta: -100,
+	transaction := &Transaction{
+		ID: "t002",
+		Lines: []*TransactionLine{
+			&TransactionLine{
+				AccountID: "a1",
+				Delta:     100,
+			},
+			&TransactionLine{
+				AccountID: "a2",
+				Delta:     -100,
 			},
 		},
 	}
@@ -102,32 +102,32 @@ func (ts *TransactionsModelSuite) TestIsConflict() {
 	conflicts := transactionDB.IsConflict(transaction)
 	assert.Equal(t, conflicts, false, "Transaction should not conflict")
 
-	transaction = &Transaction {
-		ID: "t002", 
-		Lines: []*TransactionLine {
-			&TransactionLine {
-				AccountID: "a1", 
-				Delta: 50,
-			}, 
-			&TransactionLine {
-				AccountID: "a2", 
-				Delta: -50,
+	transaction = &Transaction{
+		ID: "t002",
+		Lines: []*TransactionLine{
+			&TransactionLine{
+				AccountID: "a1",
+				Delta:     50,
+			},
+			&TransactionLine{
+				AccountID: "a2",
+				Delta:     -50,
 			},
 		},
 	}
 	conflicts = transactionDB.IsConflict(transaction)
 	assert.Equal(t, conflicts, true, "Transaction should conflict since deltas are different from first received")
 
-	transaction = &Transaction {
-		ID: "t002", 
-		Lines: []*TransactionLine {
-			&TransactionLine {
-				AccountID: "b1", 
-				Delta: 100,
-			}, 
-			&TransactionLine {
-				AccountID: "b2", 
-				Delta: -100,
+	transaction = &Transaction{
+		ID: "t002",
+		Lines: []*TransactionLine{
+			&TransactionLine{
+				AccountID: "b1",
+				Delta:     100,
+			},
+			&TransactionLine{
+				AccountID: "b2",
+				Delta:     -100,
 			},
 		},
 	}
@@ -139,18 +139,22 @@ func (ts *TransactionsModelSuite) TestTransact() {
 	t := ts.T()
 
 	transactionDB := TransactionDB{DB: ts.db}
-	
-	transaction := &Transaction {
-		ID: "t003", 
-		Lines: []*TransactionLine {
-			&TransactionLine {
-				AccountID: "a1", 
-				Delta: 100,
-			}, 
-			&TransactionLine {
-				AccountID: "a2", 
-				Delta: -100,
+
+	transaction := &Transaction{
+		ID: "t003",
+		Lines: []*TransactionLine{
+			&TransactionLine{
+				AccountID: "a1",
+				Delta:     100,
 			},
+			&TransactionLine{
+				AccountID: "a2",
+				Delta:     -100,
+			},
+		},
+		Data: map[string]interface{}{
+			"tag1": "val1",
+			"tag2": "val2",
 		},
 	}
 	done := transactionDB.Transact(transaction)

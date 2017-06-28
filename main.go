@@ -29,14 +29,29 @@ func main() {
 		"postgres", driver)
 	version, _, _ := m.Version()
 	log.Println("Current schema version:", version)
-	m.Up()
+	err = m.Up()
+	if err != nil {
+		log.Println("Error while migration:", err)
+	}
 	version, _, _ = m.Version()
 	log.Println("Migrated schema version:", version)
 	appContext := &ledgerContext.AppContext{DB: db}
 
 	router := httprouter.New()
-	router.HandlerFunc("GET", "/v1/accounts", middlewares.ContextMiddleware(controllers.GetAccountInfo, appContext))
+
+	// Create accounts and transactions
+	router.HandlerFunc("POST", "/v1/accounts", middlewares.ContextMiddleware(controllers.AddAccount, appContext))
 	router.HandlerFunc("POST", "/v1/transactions", middlewares.ContextMiddleware(controllers.MakeTransaction, appContext))
+
+	// Read or search accounts and transactions
+	router.HandlerFunc("GET", "/v1/accounts", middlewares.ContextMiddleware(controllers.GetAccounts, appContext))
+	router.HandlerFunc("POST", "/v1/accounts/_search", middlewares.ContextMiddleware(controllers.GetAccounts, appContext))
+	router.HandlerFunc("GET", "/v1/transactions", middlewares.ContextMiddleware(controllers.GetTransactions, appContext))
+	router.HandlerFunc("POST", "/v1/transactions/_search", middlewares.ContextMiddleware(controllers.GetTransactions, appContext))
+
+	// Update data of accounts and transactions
+	router.HandlerFunc("PUT", "/v1/accounts", middlewares.ContextMiddleware(controllers.UpdateAccount, appContext))
+	router.HandlerFunc("PUT", "/v1/transactions", middlewares.ContextMiddleware(controllers.UpdateTransaction, appContext))
 
 	port := "7000"
 	if lp := os.Getenv("PORT"); lp != "" {
