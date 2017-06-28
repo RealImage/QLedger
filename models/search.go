@@ -16,9 +16,15 @@ type SearchEngine struct {
 }
 
 type TransactionResult struct {
-	ID        string          `json:"id"`
-	Timestamp string          `json:"timestamp"`
-	Data      json.RawMessage `json:"data"`
+	ID        string                   `json:"id"`
+	Timestamp string                   `json:"timestamp"`
+	Data      json.RawMessage          `json:"data"`
+	Lines     []*TransactionLineResult `json:"lines"`
+}
+
+type TransactionLineResult struct {
+	AccountID string `json:"account"`
+	Delta     int    `json:"delta"`
 }
 
 type AccountResult struct {
@@ -64,9 +70,22 @@ func (engine *SearchEngine) Query(q string) (interface{}, ledgerError.Applicatio
 		transactions := make([]*TransactionResult, 0)
 		for rows.Next() {
 			txn := &TransactionResult{}
-			if err := rows.Scan(&txn.ID, &txn.Timestamp, &txn.Data); err != nil {
+			var rawAccounts, rawDelta string
+			if err := rows.Scan(&txn.ID, &txn.Timestamp, &txn.Data, &rawAccounts, &rawDelta); err != nil {
 				return nil, DBError(err)
 			}
+			var accounts []string
+			var delta []int
+			json.Unmarshal([]byte(rawAccounts), &accounts)
+			json.Unmarshal([]byte(rawDelta), &delta)
+			var lines []*TransactionLineResult
+			for i, acc := range accounts {
+				l := &TransactionLineResult{}
+				l.AccountID = acc
+				l.Delta = delta[i]
+				lines = append(lines, l)
+			}
+			txn.Lines = lines
 			transactions = append(transactions, txn)
 		}
 		return transactions, nil
@@ -104,7 +123,18 @@ func (rawQuery *SearchRawQuery) ToSQLQuery(namespace string) *SearchSQLQuery {
 	case "accounts":
 		sql = "SELECT id, balance, data FROM current_balances"
 	case "transactions":
-		sql = "SELECT id, timestamp, data FROM transactions"
+		sql = `SELECT id, timestamp, data,
+					array_to_json(ARRAY(
+						SELECT lines.account_id FROM lines
+							WHERE transaction_id=transactions.id
+							ORDER BY lines.account_id
+					)) AS account_array,
+					array_to_json(ARRAY(
+						SELECT lines.delta FROM lines
+							WHERE transaction_id=transactions.id
+							ORDER BY lines.account_id
+					)) AS delta_array
+			FROM transactions`
 	default:
 		return nil
 	}
