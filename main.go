@@ -39,6 +39,9 @@ func main() {
 
 	router := httprouter.New()
 
+	// Monitors
+	router.HandlerFunc("GET", "/ping", controllers.Ping)
+
 	// Create accounts and transactions
 	router.HandlerFunc("POST", "/v1/accounts", middlewares.ContextMiddleware(controllers.AddAccount, appContext))
 	router.HandlerFunc("POST", "/v1/transactions", middlewares.ContextMiddleware(controllers.MakeTransaction, appContext))
@@ -58,7 +61,7 @@ func main() {
 		port = lp
 	}
 	log.Println("Running server on port:", port)
-	log.Fatal(http.ListenAndServe(":"+port, router))
+	log.Fatal(http.ListenAndServe(":"+port, middlewares.TokenAuthMiddleware(router)))
 
 	defer func() {
 		if r := recover(); r != nil {
