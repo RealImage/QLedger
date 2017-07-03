@@ -7,6 +7,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -172,19 +173,30 @@ func ImportTransactionCSV(filename string) ([]map[string]interface{}, []map[stri
 }
 
 func GetAccountBalance(endpoint string, accountID interface{}) int {
-	accountsURL := fmt.Sprintf("%v/v1/accounts?id=%v", endpoint, accountID)
-	res, err := http.Get(accountsURL)
+	payload := []byte(fmt.Sprintf(`{
+	  "query": {
+	    "id": "%s"
+	  }
+	}`, accountID))
+	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(payload))
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic("Unable to get account balance:", err)
 	}
-	defer res.Body.Close()
-	account := models.Account{}
+	defer resp.Body.Close()
 
-	err = json.NewDecoder(res.Body).Decode(&account)
+	var accounts []models.AccountResult
+	body, _ := ioutil.ReadAll(resp.Body)
+	err = json.Unmarshal(body, &accounts)
 	if err != nil {
-		log.Fatal("Invalid json response:", err)
+		log.Panic("Error parsing accounts result:", err)
 	}
-	return account.Balance
+	if len(accounts) == 0 {
+		return 0
+	}
+
+	return accounts[0].Balance
 }
 
 func PostTransaction(endpoint string, transaction map[string]interface{}) int {
@@ -246,7 +258,7 @@ func (cs *CSVSuite) SetupTest() {
 	log.Println("Successfully established connection to database.")
 	log.Println("Starting test endpoints...")
 	cs.context = &ledgerContext.AppContext{DB: db}
-	cs.accountServer = httptest.NewServer(middlewares.ContextMiddleware(controllers.GetAccountInfo, cs.context))
+	cs.accountServer = httptest.NewServer(middlewares.ContextMiddleware(controllers.GetAccounts, cs.context))
 	cs.transactionsServer = httptest.NewServer(middlewares.ContextMiddleware(controllers.MakeTransaction, cs.context))
 }
 

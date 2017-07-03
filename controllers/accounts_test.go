@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"log"
@@ -19,7 +20,7 @@ import (
 )
 
 var (
-	ACCOUNTS_INFO_API = "/v1/accounts"
+	ACCOUNTS_API = "/v1/accounts"
 )
 
 type AccountsSuite struct {
@@ -38,25 +39,30 @@ func (as *AccountsSuite) SetupTest() {
 	as.context = &ledgerContext.AppContext{DB: db}
 }
 
-func (as *AccountsSuite) TestAccountsInfoAPI() {
+func (as *AccountsSuite) TestAccountsAPI() {
 	t := as.T()
-	rr := httptest.NewRecorder()
 
-	handler := middlewares.ContextMiddleware(GetAccountInfo, as.context)
-	req, err := http.NewRequest("GET", ACCOUNTS_INFO_API+"?id=100", nil)
+	// Sample account which doesn't exist
+	payload := `{
+	  "query": {
+	    "id": "acc1"
+	  }
+	}`
+	handler := middlewares.ContextMiddleware(GetAccounts, as.context)
+	req, err := http.NewRequest("GET", ACCOUNTS_API, bytes.NewBufferString(payload))
 	if err != nil {
 		t.Fatal(err)
 	}
+	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
+	assert.Equal(t, http.StatusOK, rr.Code, "Invalid response code")
 
-	assert.Equal(t, rr.Code, 200, "Invalid response code")
-	account := models.Account{}
-	err = json.Unmarshal(rr.Body.Bytes(), &account)
+	var accounts []models.AccountResult
+	err = json.Unmarshal(rr.Body.Bytes(), &accounts)
 	if err != nil {
 		t.Errorf("Invalid json response: %v", rr.Body.String())
 	}
-	assert.Equal(t, account.Id, "100", "Invalid account ID")
-	assert.Equal(t, account.Balance, 0, "Invalid account balance")
+	assert.Equal(t, len(accounts), 0, "Account should not exist")
 }
 
 func TestAccountsSuite(t *testing.T) {

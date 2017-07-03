@@ -53,7 +53,11 @@ func (ts *TransactionsSuite) TestValidAndRepeatedTransaction() {
 	      "account": "bob",
 	      "delta": -100
 	    }
-	  ]
+	  ],
+	  "data": {
+	    "tag1": "val1",
+	    "tag2": "val2"
+	  }
 	}`
 	handler := middlewares.ContextMiddleware(MakeTransaction, ts.context)
 	req, err := http.NewRequest("POST", TRANSACTIONS_API, bytes.NewBufferString(payload))

@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -60,6 +61,82 @@ func MakeTransaction(w http.ResponseWriter, r *http.Request, context *ledgerCont
 		return
 	} else {
 		log.Println("Transaction failed:", transaction.ID)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+}
+
+func GetTransactions(w http.ResponseWriter, r *http.Request, context *ledgerContext.AppContext) {
+	defer r.Body.Close()
+	engine, err := models.NewSearchEngine(context.DB, "transactions")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	body, rerr := ioutil.ReadAll(r.Body)
+	if rerr != nil {
+		log.Println("Error reading payload:", rerr)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	query := string(body)
+	log.Println("Query:", query)
+
+	results, err := engine.Query(query)
+	if err != nil {
+		log.Println("Error while querying:", err)
+		switch err.ErrorCode() {
+		case "search.query.invalid":
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		default:
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
+
+	data, jerr := json.Marshal(results)
+	if jerr != nil {
+		log.Println("Error while parsing results:", jerr)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprint(w, string(data))
+	return
+}
+
+func UpdateTransaction(w http.ResponseWriter, r *http.Request, context *ledgerContext.AppContext) {
+	defer r.Body.Close()
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Println("Error reading payload:", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	transaction := &models.Transaction{}
+	err = json.Unmarshal(body, transaction)
+	if err != nil {
+		log.Println("Error loading JSON:", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	transactionDB := models.TransactionDB{DB: context.DB}
+	// Check if a transaction with same ID already exists
+	if !transactionDB.IsExists(transaction.ID) {
+		log.Println("Transaction doesn't exist:", transaction.ID)
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	// Otherwise, update transaction
+	terr := transactionDB.UpdateTransaction(transaction)
+	if terr == nil {
+		w.WriteHeader(http.StatusOK)
+		return
+	} else {
+		log.Printf("Error while updating transaction: %v (%v)", transaction.ID, terr)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
