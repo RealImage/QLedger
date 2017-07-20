@@ -175,10 +175,10 @@ func ImportTransactionCSV(filename string) ([]map[string]interface{}, []map[stri
 func GetAccountBalance(endpoint string, accountID interface{}) int {
 	payload := []byte(fmt.Sprintf(`{
 	  "query": {
-	    "id": "%s"
+	    "must": {"fields": [{"id": {"eq": "%s"}}]}
 	  }
 	}`, accountID))
-	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(payload))
+	req, _ := http.NewRequest("POST", endpoint, bytes.NewBuffer(payload))
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
