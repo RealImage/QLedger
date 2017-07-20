@@ -181,7 +181,6 @@ Example: The following query matches requests to match accounts which satisfies 
 ```
 {
   "query": {
-    "bool": {
       "must": {
         "fields": [
             {"balance": {"gt": 0}}
@@ -195,7 +194,6 @@ Example: The following query matches requests to match accounts which satisfies 
             {"date": {"gt": "2017-01-01","lt": "2017-06-31"}}
         ]
       }
-    }
   }
 }
 ```
@@ -217,7 +215,6 @@ Example: The following query matches requests to match transactions which satisf
 ```
 {
   "query": {
-    "bool": {
       "should": {
         "fields": [
             {"id": {"eq": "intent_QW_001"}}
@@ -229,7 +226,6 @@ Example: The following query matches requests to match transactions which satisf
             {"timestamp": {"gte": "2017-01-01T05:30"}}
         ]
       }
-    }
   }
 }
 ```
