@@ -6,23 +6,36 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"regexp"
 
 	ledgerContext "github.com/RealImage/QLedger/context"
 	"github.com/RealImage/QLedger/models"
 )
 
-func MakeTransaction(w http.ResponseWriter, r *http.Request, context *ledgerContext.AppContext) {
+func unmarshalToTransaction(r *http.Request, txn *models.Transaction) error {
 	defer r.Body.Close()
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Println("Error reading payload:", err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		return err
 	}
-	transaction := &models.Transaction{}
-	err = json.Unmarshal(body, transaction)
+	err = json.Unmarshal(body, txn)
 	if err != nil {
-		log.Println("Error loading JSON:", err)
+		return err
+	}
+	var validKey = regexp.MustCompile(`^[a-z_A-Z]+$`)
+	for key := range txn.Data {
+		if !validKey.MatchString(key) {
+			return fmt.Errorf("Invalid key in data json: %v", key)
+		}
+	}
+	return nil
+}
+
+func MakeTransaction(w http.ResponseWriter, r *http.Request, context *ledgerContext.AppContext) {
+	transaction := &models.Transaction{}
+	err := unmarshalToTransaction(r, transaction)
+	if err != nil {
+		log.Println("Error loading payload:", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -107,17 +120,10 @@ func GetTransactions(w http.ResponseWriter, r *http.Request, context *ledgerCont
 }
 
 func UpdateTransaction(w http.ResponseWriter, r *http.Request, context *ledgerContext.AppContext) {
-	defer r.Body.Close()
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		log.Println("Error reading payload:", err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
 	transaction := &models.Transaction{}
-	err = json.Unmarshal(body, transaction)
+	err := unmarshalToTransaction(r, transaction)
 	if err != nil {
-		log.Println("Error loading JSON:", err)
+		log.Println("Error loading payload:", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}

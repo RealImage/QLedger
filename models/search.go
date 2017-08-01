@@ -3,8 +3,10 @@ package models
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -114,11 +116,45 @@ type SearchSQLQuery struct {
 	args []interface{}
 }
 
+func hasValidKeys(items interface{}) bool {
+	var validKey = regexp.MustCompile(`^[a-z_A-Z]+$`)
+	switch t := items.(type) {
+	case []map[string]interface{}:
+		for _, item := range t {
+			for key := range item {
+				if !validKey.MatchString(key) {
+					return false
+				}
+			}
+		}
+		return true
+	case []map[string]map[string]interface{}:
+		for _, item := range t {
+			for key := range item {
+				if !validKey.MatchString(key) {
+					return false
+				}
+			}
+		}
+		return true
+	default:
+		return false
+	}
+}
+
 func NewSearchRawQuery(q string) (*SearchRawQuery, ledgerError.ApplicationError) {
 	var rawQuery *SearchRawQuery
 	err := json.Unmarshal([]byte(q), &rawQuery)
 	if err != nil {
 		return nil, SearchQueryInvalidError(err)
+	}
+	if !(hasValidKeys(rawQuery.Query.MustClause.Fields) &&
+		hasValidKeys(rawQuery.Query.MustClause.Terms) &&
+		hasValidKeys(rawQuery.Query.MustClause.RangeItems) &&
+		hasValidKeys(rawQuery.Query.ShouldClause.Fields) &&
+		hasValidKeys(rawQuery.Query.MustClause.Terms) &&
+		hasValidKeys(rawQuery.Query.MustClause.RangeItems)) {
+		return nil, SearchQueryInvalidError(errors.New("Invalid key(s) in search query"))
 	}
 	return rawQuery, nil
 }

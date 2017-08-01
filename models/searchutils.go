@@ -6,9 +6,9 @@ import (
 	"strings"
 )
 
-// replaces $N to corresponding placeholder index ($1, $2,...)
+// replaces ? to corresponding placeholder index ($1, $2,...)
 func enumerateSQLPlacholder(msql string) (psql string) {
-	splitItems := strings.Split(msql, "$N")
+	splitItems := strings.Split(msql, "?")
 	for i, item := range splitItems {
 		if i != len(splitItems)-1 {
 			psql = psql + item + fmt.Sprintf("$%d", i+1)
@@ -66,7 +66,7 @@ func convertTermsToSQL(terms []map[string]interface{}) (where []string, args []i
 		for key, value := range term {
 			conditions = append(
 				conditions,
-				fmt.Sprintf("data->'%s' @> $N::jsonb", key),
+				fmt.Sprintf("data->'%s' @> ?::jsonb", key),
 			)
 			args = append(args, jsonify(value))
 		}
@@ -86,7 +86,7 @@ func convertRangesToSQL(ranges []map[string]map[string]interface{}) (where []str
 	// Corresponding SQL
 	/*
 	   -- numeric value
-	   SELECT id, data->'charge' FROM transactions WHERE data->>'charge' ~ '^([0-9]+[.]?[0-9]*|[.][0-9]+)$' AND (data->>'charge')::float >= 2000;
+	   SELECT id, data->'charge' FROM transactions WHERE (data->>'charge')::float >= 2000 AND (data->>'charge')::float <= 4000;
 	   -- other values
 	   SELECT id, data->'date' FROM transactions WHERE data->>'date' >= '2017-01-01' AND data->>'date' < '2017-06-31';
 	*/
@@ -97,12 +97,9 @@ func convertRangesToSQL(ranges []map[string]map[string]interface{}) (where []str
 				var condn string
 				switch value.(type) {
 				case int, int8, int16, int32, int64, float32, float64:
-					condn = fmt.Sprintf(
-						"data->>'%s' ~ '^([0-9]+[.]?[0-9]*|[.][0-9]+)$' AND (data->>'%s')::float %s $N",
-						key, key, sqlComparisonOp(op),
-					)
+					condn = fmt.Sprintf("(data->>'%s')::float %s ?", key, sqlComparisonOp(op))
 				default:
-					condn = fmt.Sprintf("data->>'%s' %s $N", key, sqlComparisonOp(op))
+					condn = fmt.Sprintf("data->>'%s' %s ?", key, sqlComparisonOp(op))
 				}
 				conditions = append(conditions, condn)
 				args = append(args, value)
@@ -123,13 +120,13 @@ func convertFieldsToSQL(fields []map[string]map[string]interface{}) (where []str
 	// Corresponding SQL
 	/*
 	   -- numeric value
-	   SELECT id, balance, data FROM accounts WHERE id = 'ACME.CREDIT' AND balance ~ '^([0-9]+[.]?[0-9]*|[.][0-9]+)$' AND balance::float >= 0;
+	   SELECT id, balance, data FROM accounts WHERE id = 'ACME.CREDIT' AND balance < 0;
 	*/
 	for _, field := range fields {
 		var conditions []string
 		for key, comparison := range field {
 			for op, value := range comparison {
-				condn := fmt.Sprintf("%s %s $N", key, sqlComparisonOp(op))
+				condn := fmt.Sprintf("%s %s ?", key, sqlComparisonOp(op))
 				conditions = append(conditions, condn)
 				args = append(args, value)
 			}
