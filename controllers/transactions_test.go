@@ -55,8 +55,8 @@ func (ts *TransactionsSuite) TestValidAndRepeatedTransaction() {
 	    }
 	  ],
 	  "data": {
-	    "tag1": "val1",
-	    "tag2": "val2"
+	    "tag_one": "val1",
+	    "tag_two": "val2"
 	  }
 	}`
 	handler := middlewares.ContextMiddleware(MakeTransaction, ts.context)
