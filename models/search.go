@@ -3,7 +3,9 @@ package models
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
+	"strconv"
 	"strings"
 
 	ledgerError "github.com/RealImage/QLedger/errors"
@@ -99,7 +101,9 @@ type QueryContainer struct {
 }
 
 type SearchRawQuery struct {
-	Query struct {
+	Offset *int `json:"from,omitempty"`
+	Limit  *int `json:"size,omitempty"`
+	Query  struct {
 		MustClause   QueryContainer `json:"must"`
 		ShouldClause QueryContainer `json:"should"`
 	} `json:"query"`
@@ -168,6 +172,8 @@ func (rawQuery *SearchRawQuery) ToSQLQuery(namespace string) *SearchSQLQuery {
 	rangesWhere, rangesArgs = convertRangesToSQL(shouldClause.RangeItems)
 	shouldWhere = append(shouldWhere, rangesWhere...)
 	args = append(args, rangesArgs...)
+	var offset = rawQuery.Offset
+	var limit = rawQuery.Limit
 
 	if len(mustWhere) == 0 && len(shouldWhere) == 0 {
 		return &SearchSQLQuery{sql: sql, args: args}
@@ -183,6 +189,15 @@ func (rawQuery *SearchRawQuery) ToSQLQuery(namespace string) *SearchSQLQuery {
 	if len(shouldWhere) != 0 {
 		sql = sql + strings.Join(shouldWhere, " OR ")
 	}
+	if offset != nil {
+		fmt.Println("offset", offset)
+		sql = sql + " offset " + strconv.Itoa(*offset) + " "
+	}
+
+	if limit != nil {
+		sql = sql + " limit " + strconv.Itoa(*limit)
+	}
+
 	sql = enumerateSQLPlacholder(sql)
 	return &SearchSQLQuery{sql: sql, args: args}
 }
