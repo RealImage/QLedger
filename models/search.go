@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
 	"regexp"
 	"strconv"
@@ -103,8 +102,8 @@ type QueryContainer struct {
 }
 
 type SearchRawQuery struct {
-	Offset *int `json:"from,omitempty"`
-	Limit  *int `json:"size,omitempty"`
+	Offset int `json:"from,omitempty"`
+	Limit  int `json:"size,omitempty"`
 	Query  struct {
 		MustClause   QueryContainer `json:"must"`
 		ShouldClause QueryContainer `json:"should"`
@@ -225,13 +224,12 @@ func (rawQuery *SearchRawQuery) ToSQLQuery(namespace string) *SearchSQLQuery {
 	if len(shouldWhere) != 0 {
 		sql = sql + strings.Join(shouldWhere, " OR ")
 	}
-	if offset != nil {
-		fmt.Println("offset", offset)
-		sql = sql + " offset " + strconv.Itoa(*offset) + " "
-	}
 
-	if limit != nil {
-		sql = sql + " limit " + strconv.Itoa(*limit)
+	if offset > 0 {
+		sql = sql + " OFFSET " + strconv.Itoa(offset) + " "
+	}
+	if limit > 0 {
+		sql = sql + " LIMIT " + strconv.Itoa(limit)
 	}
 
 	sql = enumerateSQLPlacholder(sql)
