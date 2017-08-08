@@ -216,13 +216,13 @@ func (rawQuery *SearchRawQuery) ToSQLQuery(namespace string) *SearchSQLQuery {
 
 	sql = sql + " WHERE "
 	if len(mustWhere) != 0 {
-		sql = sql + strings.Join(mustWhere, " AND ")
+		sql = sql + "(" + strings.Join(mustWhere, " AND ") + ")"
 		if len(shouldWhere) != 0 {
 			sql = sql + " AND "
 		}
 	}
 	if len(shouldWhere) != 0 {
-		sql = sql + strings.Join(shouldWhere, " OR ")
+		sql = sql + "(" + strings.Join(shouldWhere, " OR ") + ")"
 	}
 
 	if offset > 0 {

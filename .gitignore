@@ -23,6 +23,7 @@ _testmain.go
 *.test
 *.prof
 .idea/
+.env
 
 out/
 bin/
