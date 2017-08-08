@@ -3,8 +3,10 @@ package models
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"log"
+	"regexp"
+	"strconv"
 	"strings"
 
 	ledgerError "github.com/RealImage/QLedger/errors"
@@ -93,11 +95,18 @@ func (engine *SearchEngine) Query(q string) (interface{}, ledgerError.Applicatio
 	return nil, nil
 }
 
+type QueryContainer struct {
+	Fields     []map[string]map[string]interface{} `json:"fields"`
+	Terms      []map[string]interface{}            `json:"terms"`
+	RangeItems []map[string]map[string]interface{} `json:"ranges"`
+}
+
 type SearchRawQuery struct {
-	Query struct {
-		ID         string                   `json:"id"`
-		Terms      []map[string]interface{} `json:"terms"`
-		RangeItems []map[string]interface{} `json:"range"`
+	Offset int `json:"from,omitempty"`
+	Limit  int `json:"size,omitempty"`
+	Query  struct {
+		MustClause   QueryContainer `json:"must"`
+		ShouldClause QueryContainer `json:"should"`
 	} `json:"query"`
 }
 
@@ -106,11 +115,45 @@ type SearchSQLQuery struct {
 	args []interface{}
 }
 
+func hasValidKeys(items interface{}) bool {
+	var validKey = regexp.MustCompile(`^[a-z_A-Z]+$`)
+	switch t := items.(type) {
+	case []map[string]interface{}:
+		for _, item := range t {
+			for key := range item {
+				if !validKey.MatchString(key) {
+					return false
+				}
+			}
+		}
+		return true
+	case []map[string]map[string]interface{}:
+		for _, item := range t {
+			for key := range item {
+				if !validKey.MatchString(key) {
+					return false
+				}
+			}
+		}
+		return true
+	default:
+		return false
+	}
+}
+
 func NewSearchRawQuery(q string) (*SearchRawQuery, ledgerError.ApplicationError) {
 	var rawQuery *SearchRawQuery
 	err := json.Unmarshal([]byte(q), &rawQuery)
 	if err != nil {
 		return nil, SearchQueryInvalidError(err)
+	}
+	if !(hasValidKeys(rawQuery.Query.MustClause.Fields) &&
+		hasValidKeys(rawQuery.Query.MustClause.Terms) &&
+		hasValidKeys(rawQuery.Query.MustClause.RangeItems) &&
+		hasValidKeys(rawQuery.Query.ShouldClause.Fields) &&
+		hasValidKeys(rawQuery.Query.MustClause.Terms) &&
+		hasValidKeys(rawQuery.Query.MustClause.RangeItems)) {
+		return nil, SearchQueryInvalidError(errors.New("Invalid key(s) in search query"))
 	}
 	return rawQuery, nil
 }
@@ -138,86 +181,57 @@ func (rawQuery *SearchRawQuery) ToSQLQuery(namespace string) *SearchSQLQuery {
 	default:
 		return nil
 	}
-	if len(rawQuery.Query.ID) != 0 {
-		sql = sql + " WHERE id = $1"
-		return &SearchSQLQuery{sql: sql, args: []interface{}{rawQuery.Query.ID}}
-	}
-	if len(rawQuery.Query.Terms) == 0 && len(rawQuery.Query.RangeItems) == 0 {
-		return &SearchSQLQuery{sql: sql}
+
+	// Process must queries
+	var mustWhere []string
+	mustClause := rawQuery.Query.MustClause
+	fieldsWhere, fieldsArgs := convertFieldsToSQL(mustClause.Fields)
+	mustWhere = append(mustWhere, fieldsWhere...)
+	args = append(args, fieldsArgs...)
+	termsWhere, termsArgs := convertTermsToSQL(mustClause.Terms)
+	mustWhere = append(mustWhere, termsWhere...)
+	args = append(args, termsArgs...)
+	rangesWhere, rangesArgs := convertRangesToSQL(mustClause.RangeItems)
+	mustWhere = append(mustWhere, rangesWhere...)
+	args = append(args, rangesArgs...)
+
+	// Process should queries
+	var shouldWhere []string
+	shouldClause := rawQuery.Query.ShouldClause
+	fieldsWhere, fieldsArgs = convertFieldsToSQL(shouldClause.Fields)
+	shouldWhere = append(shouldWhere, fieldsWhere...)
+	args = append(args, fieldsArgs...)
+	termsWhere, termsArgs = convertTermsToSQL(shouldClause.Terms)
+	shouldWhere = append(shouldWhere, termsWhere...)
+	args = append(args, termsArgs...)
+	rangesWhere, rangesArgs = convertRangesToSQL(shouldClause.RangeItems)
+	shouldWhere = append(shouldWhere, rangesWhere...)
+	args = append(args, rangesArgs...)
+	var offset = rawQuery.Offset
+	var limit = rawQuery.Limit
+
+	if len(mustWhere) == 0 && len(shouldWhere) == 0 {
+		return &SearchSQLQuery{sql: sql, args: args}
 	}
 
-	jsonify := func(input interface{}) string {
-		j, _ := json.Marshal(input)
-		return string(j)
-	}
-	sqlComparisonOp := func(op string) string {
-		switch op {
-		case "gt":
-			return ">"
-		case "lt":
-			return "<"
-		case "gte":
-			return ">="
-		case "lte":
-			return "<="
+	sql = sql + " WHERE "
+	if len(mustWhere) != 0 {
+		sql = sql + "(" + strings.Join(mustWhere, " AND ") + ")"
+		if len(shouldWhere) != 0 {
+			sql = sql + " AND "
 		}
-		return "="
+	}
+	if len(shouldWhere) != 0 {
+		sql = sql + "(" + strings.Join(shouldWhere, " OR ") + ")"
 	}
 
-	var where []string
-	// Term queries
-	/*
-		-- string value
-		SELECT id FROM transactions WHERE data->'status' @> '"completed"'::jsonb;
-		-- boolean value
-		SELECT id FROM transactions WHERE data->'active' @> 'true'::jsonb;
-		-- numeric value
-		SELECT id FROM transactions WHERE data->'charge' @> '2000'::jsonb;
-		-- array value
-		SELECT id FROM transactions WHERE data->'colors' @> '["red", "green"]'::jsonb;
-		-- object value
-		SELECT id FROM transactions WHERE data->'products' @> '{"qw":{"coupons": ["x001"]}}'::jsonb;
-	*/
-	for _, term := range rawQuery.Query.Terms {
-		var conditions []string
-		for key, value := range term {
-			conditions = append(
-				conditions,
-				fmt.Sprintf("data->'%s' @> $%d::jsonb", key, len(args)+1),
-			)
-			args = append(args, jsonify(value))
-		}
-		where = append(where, "("+strings.Join(conditions, " AND ")+")")
+	if offset > 0 {
+		sql = sql + " OFFSET " + strconv.Itoa(offset) + " "
 	}
-	// Range queries
-	/*
-		-- numeric value
-		SELECT id, data->'charge' FROM transactions WHERE data->>'charge' ~ '^([0-9]+[.]?[0-9]*|[.][0-9]+)$' AND (data->>'charge')::float >= 2000;
-		-- other values
-		SELECT id, data->'date' FROM transactions WHERE data->>'date' >= '2017-01-01' AND data->>'date' < '2017-06-01';
-	*/
-	for _, rangeItem := range rawQuery.Query.RangeItems {
-		var conditions []string
-		for key, comparison := range rangeItem {
-			compItem, _ := comparison.(map[string]interface{})
-			for op, value := range compItem {
-				var condn string
-				switch value.(type) {
-				case int, int8, int16, int32, int64, float32, float64:
-					condn = fmt.Sprintf(
-						"data->>'%s' ~ '^([0-9]+[.]?[0-9]*|[.][0-9]+)$' AND (data->>'%s')::float %s $%d",
-						key, key, sqlComparisonOp(op), len(args)+1,
-					)
-				default:
-					condn = fmt.Sprintf("data->>'%s' %s $%d", key, sqlComparisonOp(op), len(args)+1)
-				}
-				conditions = append(conditions, condn)
-				args = append(args, value)
-			}
-		}
-		where = append(where, "("+strings.Join(conditions, " AND ")+")")
+	if limit > 0 {
+		sql = sql + " LIMIT " + strconv.Itoa(limit)
 	}
-	sql = sql + " WHERE " + strings.Join(where, " OR ")
 
+	sql = enumerateSQLPlacholder(sql)
 	return &SearchSQLQuery{sql: sql, args: args}
 }

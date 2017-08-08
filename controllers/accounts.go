@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"regexp"
 
 	ledgerContext "github.com/RealImage/QLedger/context"
 	"github.com/RealImage/QLedger/models"
@@ -51,18 +52,30 @@ func GetAccounts(w http.ResponseWriter, r *http.Request, context *ledgerContext.
 	return
 }
 
-func AddAccount(w http.ResponseWriter, r *http.Request, context *ledgerContext.AppContext) {
+func unmarshalToAccount(r *http.Request, account *models.Account) error {
 	defer r.Body.Close()
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Println("Error reading payload:", err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		return err
 	}
-	account := &models.Account{}
 	err = json.Unmarshal(body, account)
 	if err != nil {
-		log.Println("Error loading JSON:", err)
+		return err
+	}
+	var validKey = regexp.MustCompile(`^[a-z_A-Z]+$`)
+	for key := range account.Data {
+		if !validKey.MatchString(key) {
+			return fmt.Errorf("Invalid key in data json: %v", key)
+		}
+	}
+	return nil
+}
+
+func AddAccount(w http.ResponseWriter, r *http.Request, context *ledgerContext.AppContext) {
+	account := &models.Account{}
+	err := unmarshalToAccount(r, account)
+	if err != nil {
+		log.Println("Error loading payload:", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -88,17 +101,10 @@ func AddAccount(w http.ResponseWriter, r *http.Request, context *ledgerContext.A
 }
 
 func UpdateAccount(w http.ResponseWriter, r *http.Request, context *ledgerContext.AppContext) {
-	defer r.Body.Close()
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		log.Println("Error reading payload:", err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
 	account := &models.Account{}
-	err = json.Unmarshal(body, account)
+	err := unmarshalToAccount(r, account)
 	if err != nil {
-		log.Println("Error loading JSON:", err)
+		log.Println("Error loading payload:", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
