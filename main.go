@@ -23,38 +23,52 @@ func main() {
 	log.Println("Successfully established connection to database.")
 
 	log.Println("Starting db schema migration...")
-	driver, _ := postgres.WithInstance(db, &postgres.Config{})
-	m, _ := migrate.NewWithDatabaseInstance(
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	if err != nil {
+		log.Panic("Unable to create database instance for migration:", err)
+	}
+
+	m, err := migrate.NewWithDatabaseInstance(
 		"file://migrations/postgres",
 		"postgres", driver)
-	version, _, _ := m.Version()
+	if err != nil {
+		log.Panic("Unable to create Migrate instance for database:", err)
+	}
+
+	version, dirty, err := m.Version()
+	if err != nil {
+		log.Panic("Unable to get current migration version for database:", dirty, err)
+	}
 	log.Println("Current schema version:", version)
+
 	err = m.Up()
 	if err != nil {
-		log.Println("Error while migration:", err)
+		log.Panic("Error while migration:", err)
 	}
+
 	version, _, _ = m.Version()
 	log.Println("Migrated schema version:", version)
+
 	appContext := &ledgerContext.AppContext{DB: db}
 
 	router := httprouter.New()
 
 	// Monitors
-	router.HandlerFunc("GET", "/ping", controllers.Ping)
+	router.HandlerFunc(http.MethodGet, "/ping", controllers.Ping)
 
 	// Create accounts and transactions
-	router.HandlerFunc("POST", "/v1/accounts", middlewares.ContextMiddleware(controllers.AddAccount, appContext))
-	router.HandlerFunc("POST", "/v1/transactions", middlewares.ContextMiddleware(controllers.MakeTransaction, appContext))
+	router.HandlerFunc(http.MethodPost, "/v1/accounts", middlewares.ContextMiddleware(controllers.AddAccount, appContext))
+	router.HandlerFunc(http.MethodPost, "/v1/transactions", middlewares.ContextMiddleware(controllers.MakeTransaction, appContext))
 
 	// Read or search accounts and transactions
-	router.HandlerFunc("GET", "/v1/accounts", middlewares.ContextMiddleware(controllers.GetAccounts, appContext))
-	router.HandlerFunc("POST", "/v1/accounts/_search", middlewares.ContextMiddleware(controllers.GetAccounts, appContext))
-	router.HandlerFunc("GET", "/v1/transactions", middlewares.ContextMiddleware(controllers.GetTransactions, appContext))
-	router.HandlerFunc("POST", "/v1/transactions/_search", middlewares.ContextMiddleware(controllers.GetTransactions, appContext))
+	router.HandlerFunc(http.MethodGet, "/v1/accounts", middlewares.ContextMiddleware(controllers.GetAccounts, appContext))
+	router.HandlerFunc(http.MethodPost, "/v1/accounts/_search", middlewares.ContextMiddleware(controllers.GetAccounts, appContext))
+	router.HandlerFunc(http.MethodGet, "/v1/transactions", middlewares.ContextMiddleware(controllers.GetTransactions, appContext))
+	router.HandlerFunc(http.MethodPost, "/v1/transactions/_search", middlewares.ContextMiddleware(controllers.GetTransactions, appContext))
 
 	// Update data of accounts and transactions
-	router.HandlerFunc("PUT", "/v1/accounts", middlewares.ContextMiddleware(controllers.UpdateAccount, appContext))
-	router.HandlerFunc("PUT", "/v1/transactions", middlewares.ContextMiddleware(controllers.UpdateTransaction, appContext))
+	router.HandlerFunc(http.MethodPut, "/v1/accounts", middlewares.ContextMiddleware(controllers.UpdateAccount, appContext))
+	router.HandlerFunc(http.MethodPut, "/v1/transactions", middlewares.ContextMiddleware(controllers.UpdateTransaction, appContext))
 
 	port := "7000"
 	if lp := os.Getenv("PORT"); lp != "" {

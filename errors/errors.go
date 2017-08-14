@@ -3,10 +3,14 @@ package errors
 import "fmt"
 
 type ApplicationError interface {
+	//TODO Should we embed log.Error in here and add a new function New(err errors, code, message string) *ApplicationError
 	Error() string
 	ErrorCode() string
 	ErrorMessage() string
 }
+
+//TODO create a String() method for ApplicationError
+
 type BaseApplicationError struct {
 	Message string
 	Code    string

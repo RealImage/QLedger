@@ -14,25 +14,27 @@ import (
 
 func GetAccounts(w http.ResponseWriter, r *http.Request, context *ledgerContext.AppContext) {
 	defer r.Body.Close()
-	engine, err := models.NewSearchEngine(context.DB, "accounts")
-	if err != nil {
+	engine, aerr := models.NewSearchEngine(context.DB, "accounts")
+	if aerr != nil {
+		log.Println("Error while creating Search Engine:", aerr)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	body, rerr := ioutil.ReadAll(r.Body)
-	if rerr != nil {
-		log.Println("Error reading payload:", rerr)
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Println("Error reading payload:", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+
 	query := string(body)
 	log.Println("Query:", query)
 
-	results, err := engine.Query(query)
-	if err != nil {
-		log.Println("Error while querying:", err)
-		switch err.ErrorCode() {
+	results, aerr := engine.Query(query)
+	if aerr != nil {
+		log.Println("Error while querying:", aerr)
+		switch aerr.ErrorCode() {
 		case "search.query.invalid":
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -42,13 +44,16 @@ func GetAccounts(w http.ResponseWriter, r *http.Request, context *ledgerContext.
 		}
 	}
 
-	data, jerr := json.Marshal(results)
-	if jerr != nil {
-		log.Println("Error while parsing results:", jerr)
+	data, err := json.Marshal(results)
+	if err != nil {
+		log.Println("Error while parsing results:", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	fmt.Fprint(w, string(data))
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Write(data)
+
 	return
 }
 
@@ -77,6 +82,7 @@ func AddAccount(w http.ResponseWriter, r *http.Request, context *ledgerContext.A
 	if err != nil {
 		log.Println("Error loading payload:", err)
 		w.WriteHeader(http.StatusBadRequest)
+		//TODO Should we return any error message?
 		return
 	}
 

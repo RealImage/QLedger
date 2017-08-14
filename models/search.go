@@ -12,6 +12,11 @@ import (
 	ledgerError "github.com/RealImage/QLedger/errors"
 )
 
+var (
+	SearchNamespaceAccounts     = "accounts"
+	SearchNamespaceTransactions = "transactions"
+)
+
 type SearchEngine struct {
 	db        *sql.DB
 	namespace string
@@ -36,29 +41,30 @@ type AccountResult struct {
 }
 
 func NewSearchEngine(db *sql.DB, namespace string) (*SearchEngine, ledgerError.ApplicationError) {
-	if !(namespace == "accounts" || namespace == "transactions") {
+	if namespace != SearchNamespaceAccounts && namespace != SearchNamespaceTransactions {
 		return nil, SearchNamespaceInvalidError(namespace)
 	}
+
 	return &SearchEngine{db: db, namespace: namespace}, nil
 }
 
 func (engine *SearchEngine) Query(q string) (interface{}, ledgerError.ApplicationError) {
-	rawQuery, err := NewSearchRawQuery(q)
-	if err != nil {
-		return nil, err
+	rawQuery, aerr := NewSearchRawQuery(q)
+	if aerr != nil {
+		return nil, aerr
 	}
 
 	sqlQuery := rawQuery.ToSQLQuery(engine.namespace)
 	log.Println("sqlQuery SQL:", sqlQuery.sql)
 	log.Println("sqlQuery args:", sqlQuery.args)
-	rows, derr := engine.db.Query(sqlQuery.sql, sqlQuery.args...)
-	if derr != nil {
-		return nil, DBError(derr)
+	rows, err := engine.db.Query(sqlQuery.sql, sqlQuery.args...)
+	if err != nil {
+		return nil, DBError(err)
 	}
 	defer rows.Close()
 
 	switch engine.namespace {
-	case "accounts":
+	case SearchNamespaceAccounts:
 		accounts := make([]*AccountResult, 0)
 		for rows.Next() {
 			acc := &AccountResult{}
@@ -68,7 +74,8 @@ func (engine *SearchEngine) Query(q string) (interface{}, ledgerError.Applicatio
 			accounts = append(accounts, acc)
 		}
 		return accounts, nil
-	case "transactions":
+
+	case SearchNamespaceTransactions:
 		transactions := make([]*TransactionResult, 0)
 		for rows.Next() {
 			txn := &TransactionResult{}
@@ -76,6 +83,7 @@ func (engine *SearchEngine) Query(q string) (interface{}, ledgerError.Applicatio
 			if err := rows.Scan(&txn.ID, &txn.Timestamp, &txn.Data, &rawAccounts, &rawDelta); err != nil {
 				return nil, DBError(err)
 			}
+
 			var accounts []string
 			var delta []int
 			json.Unmarshal([]byte(rawAccounts), &accounts)
@@ -92,6 +100,7 @@ func (engine *SearchEngine) Query(q string) (interface{}, ledgerError.Applicatio
 		}
 		return transactions, nil
 	}
+
 	return nil, nil
 }
 
@@ -159,14 +168,14 @@ func NewSearchRawQuery(q string) (*SearchRawQuery, ledgerError.ApplicationError)
 }
 
 func (rawQuery *SearchRawQuery) ToSQLQuery(namespace string) *SearchSQLQuery {
-	var sql string
+	var q string
 	var args []interface{}
 
 	switch namespace {
 	case "accounts":
-		sql = "SELECT id, balance, data FROM current_balances"
+		q = "SELECT id, balance, data FROM current_balances"
 	case "transactions":
-		sql = `SELECT id, timestamp, data,
+		q = `SELECT id, timestamp, data,
 					array_to_json(ARRAY(
 						SELECT lines.account_id FROM lines
 							WHERE transaction_id=transactions.id
@@ -188,9 +197,11 @@ func (rawQuery *SearchRawQuery) ToSQLQuery(namespace string) *SearchSQLQuery {
 	fieldsWhere, fieldsArgs := convertFieldsToSQL(mustClause.Fields)
 	mustWhere = append(mustWhere, fieldsWhere...)
 	args = append(args, fieldsArgs...)
+
 	termsWhere, termsArgs := convertTermsToSQL(mustClause.Terms)
 	mustWhere = append(mustWhere, termsWhere...)
 	args = append(args, termsArgs...)
+
 	rangesWhere, rangesArgs := convertRangesToSQL(mustClause.RangeItems)
 	mustWhere = append(mustWhere, rangesWhere...)
 	args = append(args, rangesArgs...)
@@ -201,37 +212,41 @@ func (rawQuery *SearchRawQuery) ToSQLQuery(namespace string) *SearchSQLQuery {
 	fieldsWhere, fieldsArgs = convertFieldsToSQL(shouldClause.Fields)
 	shouldWhere = append(shouldWhere, fieldsWhere...)
 	args = append(args, fieldsArgs...)
+
 	termsWhere, termsArgs = convertTermsToSQL(shouldClause.Terms)
 	shouldWhere = append(shouldWhere, termsWhere...)
 	args = append(args, termsArgs...)
+
 	rangesWhere, rangesArgs = convertRangesToSQL(shouldClause.RangeItems)
 	shouldWhere = append(shouldWhere, rangesWhere...)
 	args = append(args, rangesArgs...)
+
 	var offset = rawQuery.Offset
 	var limit = rawQuery.Limit
 
 	if len(mustWhere) == 0 && len(shouldWhere) == 0 {
-		return &SearchSQLQuery{sql: sql, args: args}
+		return &SearchSQLQuery{sql: q, args: args}
 	}
 
-	sql = sql + " WHERE "
+	q = q + " WHERE "
 	if len(mustWhere) != 0 {
-		sql = sql + "(" + strings.Join(mustWhere, " AND ") + ")"
+		q = q + "(" + strings.Join(mustWhere, " AND ") + ")"
 		if len(shouldWhere) != 0 {
-			sql = sql + " AND "
+			q = q + " AND "
 		}
 	}
+
 	if len(shouldWhere) != 0 {
-		sql = sql + "(" + strings.Join(shouldWhere, " OR ") + ")"
+		q = q + "(" + strings.Join(shouldWhere, " OR ") + ")"
 	}
 
 	if offset > 0 {
-		sql = sql + " OFFSET " + strconv.Itoa(offset) + " "
+		q = q + " OFFSET " + strconv.Itoa(offset) + " "
 	}
 	if limit > 0 {
-		sql = sql + " LIMIT " + strconv.Itoa(limit)
+		q = q + " LIMIT " + strconv.Itoa(limit)
 	}
 
-	sql = enumerateSQLPlacholder(sql)
-	return &SearchSQLQuery{sql: sql, args: args}
+	q = enumerateSQLPlacholder(q)
+	return &SearchSQLQuery{sql: q, args: args}
 }

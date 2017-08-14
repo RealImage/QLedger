@@ -1,12 +1,12 @@
 package controllers
 
 import (
-	"fmt"
 	"net/http"
 )
 
 func Ping(w http.ResponseWriter, r *http.Request) {
 	response := `{"ping": "pong"}`
-	fmt.Fprint(w, response)
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Write([]byte(response))
 	return
 }

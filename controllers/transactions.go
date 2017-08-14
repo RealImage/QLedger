@@ -40,6 +40,14 @@ func MakeTransaction(w http.ResponseWriter, r *http.Request, context *ledgerCont
 		return
 	}
 
+	// Skip if the transaction is invalid
+	// by validating the delta values
+	if !transaction.IsValid() {
+		log.Println("Transaction is invalid:", transaction.ID)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	transactionsDB := models.TransactionDB{DB: context.DB}
 	// Check if a transaction with same ID already exists
 	if transactionsDB.IsExists(transaction.ID) {
@@ -59,14 +67,6 @@ func MakeTransaction(w http.ResponseWriter, r *http.Request, context *ledgerCont
 		}
 	}
 
-	// Skip if the transaction is invalid
-	// by validating the delta values
-	if !transaction.IsValid() {
-		log.Println("Transaction is invalid:", transaction.ID)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
 	// Otherwise, do transaction
 	done := transactionsDB.Transact(transaction)
 	if done {
@@ -81,25 +81,25 @@ func MakeTransaction(w http.ResponseWriter, r *http.Request, context *ledgerCont
 
 func GetTransactions(w http.ResponseWriter, r *http.Request, context *ledgerContext.AppContext) {
 	defer r.Body.Close()
-	engine, err := models.NewSearchEngine(context.DB, "transactions")
-	if err != nil {
+	engine, aerr := models.NewSearchEngine(context.DB, "transactions")
+	if aerr != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	body, rerr := ioutil.ReadAll(r.Body)
-	if rerr != nil {
-		log.Println("Error reading payload:", rerr)
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Println("Error reading payload:", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	query := string(body)
 	log.Println("Query:", query)
 
-	results, err := engine.Query(query)
-	if err != nil {
-		log.Println("Error while querying:", err)
-		switch err.ErrorCode() {
+	results, aerr := engine.Query(query)
+	if aerr != nil {
+		log.Println("Error while querying:", aerr)
+		switch aerr.ErrorCode() {
 		case "search.query.invalid":
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -109,13 +109,16 @@ func GetTransactions(w http.ResponseWriter, r *http.Request, context *ledgerCont
 		}
 	}
 
-	data, jerr := json.Marshal(results)
-	if jerr != nil {
-		log.Println("Error while parsing results:", jerr)
+	data, err := json.Marshal(results)
+	if err != nil {
+		log.Println("Error while parsing results:", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	fmt.Fprint(w, string(data))
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Write(data)
+
 	return
 }
 
