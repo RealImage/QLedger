@@ -36,13 +36,13 @@ func main() {
 	}
 
 	version, dirty, err := m.Version()
-	if err != nil {
+	if err != nil && err != migrate.ErrNilVersion {
 		log.Panic("Unable to get current migration version for database:", dirty, err)
 	}
 	log.Println("Current schema version:", version)
 
 	err = m.Up()
-	if err != nil {
+	if err != nil && err != migrate.ErrNoChange {
 		log.Panic("Error while migration:", err)
 	}
 
