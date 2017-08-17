@@ -8,6 +8,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
+// TokenAuthMiddleware is a middleware that provides authentication functionality
 func TokenAuthMiddleware(router *httprouter.Router) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Check whether token authentication enabled

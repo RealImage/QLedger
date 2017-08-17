@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Transaction represents a transaction in a ledger
 type Transaction struct {
 	ID        string                 `json:"id"`
 	Data      map[string]interface{} `json:"data"`
@@ -18,11 +19,13 @@ type Transaction struct {
 	Lines     []*TransactionLine     `json:"lines"`
 }
 
+// TransactionLine represents a transaction line in a ledger
 type TransactionLine struct {
 	AccountID string `json:"account"`
 	Delta     int    `json:"delta"`
 }
 
+// IsValid validates the delta list of a transaction
 func (t *Transaction) IsValid() bool {
 	sum := 0
 	for _, line := range t.Lines {
@@ -31,25 +34,34 @@ func (t *Transaction) IsValid() bool {
 	return sum == 0
 }
 
+// TransactionDB is the interface to all transaction operations
 type TransactionDB struct {
-	DB *sql.DB
+	db *sql.DB
 }
 
-func (t *TransactionDB) IsExists(id string) bool {
+// NewTransactionDB returns a new instance of `TransactionDB`
+func NewTransactionDB(db *sql.DB) TransactionDB {
+	return TransactionDB{db: db}
+}
+
+// IsExists says whether a transaction already exists or not
+func (t *TransactionDB) IsExists(id string) (bool, ledgerError.ApplicationError) {
 	var exists bool
-	err := t.DB.QueryRow("SELECT EXISTS (SELECT * FROM transactions WHERE id=$1)", id).Scan(&exists)
+	err := t.db.QueryRow("SELECT EXISTS (SELECT id FROM transactions WHERE id=$1)", id).Scan(&exists)
 	if err != nil {
 		log.Println("Error executing transaction exists query:", err)
+		return false, DBError(err)
 	}
-	return exists
+	return exists, nil
 }
 
-func (t *TransactionDB) IsConflict(transaction *Transaction) bool {
+// IsConflict says whether a transaction conflicts with an existing transaction
+func (t *TransactionDB) IsConflict(transaction *Transaction) (bool, ledgerError.ApplicationError) {
 	// Read existing lines
-	rows, err := t.DB.Query("SELECT account_id, delta FROM lines WHERE transaction_id=$1", transaction.ID)
+	rows, err := t.db.Query("SELECT account_id, delta FROM lines WHERE transaction_id=$1", transaction.ID)
 	if err != nil {
 		log.Println("Error executing transaction lines query:", err)
-		return false
+		return false, DBError(err)
 	}
 	defer rows.Close()
 	var existingLines []*TransactionLine
@@ -57,23 +69,24 @@ func (t *TransactionDB) IsConflict(transaction *Transaction) bool {
 		line := &TransactionLine{}
 		if err := rows.Scan(&line.AccountID, &line.Delta); err != nil {
 			log.Println("Error scanning transaction lines:", err)
-			return false
+			return false, DBError(err)
 		}
 		existingLines = append(existingLines, line)
 	}
 	if err := rows.Err(); err != nil {
 		log.Println("Error iterating transaction lines rows:", err)
-		return false
+		return false, DBError(err)
 	}
 
 	// Compare new and existing transaction lines
-	return !reflect.DeepEqual(transaction.Lines, existingLines)
+	return !reflect.DeepEqual(transaction.Lines, existingLines), nil
 }
 
+// Transact creates the input transaction in the DB
 func (t *TransactionDB) Transact(txn *Transaction) bool {
 	// Start the transaction
 	var err error
-	tx, err := t.DB.Begin()
+	tx, err := t.db.Begin()
 	if err != nil {
 		log.Println("Error beginning transaction:", err)
 		return false
@@ -131,6 +144,7 @@ func (t *TransactionDB) Transact(txn *Transaction) bool {
 	return true
 }
 
+// UpdateTransaction updates data of the given transaction
 func (t *TransactionDB) UpdateTransaction(txn *Transaction) ledgerError.ApplicationError {
 	data, err := json.Marshal(txn.Data)
 	if err != nil {
@@ -142,7 +156,7 @@ func (t *TransactionDB) UpdateTransaction(txn *Transaction) ledgerError.Applicat
 	}
 
 	q := "UPDATE transactions SET data = $1 WHERE id = $2"
-	_, err = t.DB.Exec(q, tData, txn.ID)
+	_, err = t.db.Exec(q, tData, txn.ID)
 	if err != nil {
 		return DBError(err)
 	}

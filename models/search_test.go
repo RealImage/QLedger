@@ -30,12 +30,12 @@ func (ss *SearchSuite) SetupSuite() {
 		ss.db = db
 	}
 	log.Println("Successfully established connection to database.")
-	ss.accDB = AccountDB{DB: db}
-	ss.txnDB = TransactionDB{DB: db}
+	ss.accDB = NewAccountDB(db)
+	ss.txnDB = NewTransactionDB(db)
 
 	// Create test accounts
 	acc1 := &Account{
-		Id: "acc1",
+		ID: "acc1",
 		Data: map[string]interface{}{
 			"customer_id": "C1",
 			"status":      "active",
@@ -45,7 +45,7 @@ func (ss *SearchSuite) SetupSuite() {
 	err = ss.accDB.CreateAccount(acc1)
 	assert.Equal(t, nil, err, "Error creating test account")
 	acc2 := &Account{
-		Id: "acc2",
+		ID: "acc2",
 		Data: map[string]interface{}{
 			"customer_id": "C2",
 			"status":      "inactive",

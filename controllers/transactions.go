@@ -31,6 +31,7 @@ func unmarshalToTransaction(r *http.Request, txn *models.Transaction) error {
 	return nil
 }
 
+// MakeTransaction creates a new transaction from the request data
 func MakeTransaction(w http.ResponseWriter, r *http.Request, context *ledgerContext.AppContext) {
 	transaction := &models.Transaction{}
 	err := unmarshalToTransaction(r, transaction)
@@ -48,49 +49,60 @@ func MakeTransaction(w http.ResponseWriter, r *http.Request, context *ledgerCont
 		return
 	}
 
-	transactionsDB := models.TransactionDB{DB: context.DB}
+	transactionsDB := models.NewTransactionDB(context.DB)
 	// Check if a transaction with same ID already exists
-	if transactionsDB.IsExists(transaction.ID) {
+	isExists, err := transactionsDB.IsExists(transaction.ID)
+	if err != nil {
+		log.Println("Error while checking for existing transaction:", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if isExists {
 		// Check if the transaction lines are different
 		// and conflicts with the existing lines
-		if transactionsDB.IsConflict(transaction) {
+		isConflict, err := transactionsDB.IsConflict(transaction)
+		if err != nil {
+			log.Println("Error while checking for conflicting transaction:", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if isConflict {
 			// The conflicting transactions are denied
 			log.Println("Transaction is conflicting:", transaction.ID)
 			w.WriteHeader(http.StatusConflict)
 			return
-		} else {
-			// Otherwise the transaction is just a duplicate
-			// The exactly duplicate transactions are ignored
-			log.Println("Transaction is duplicate:", transaction.ID)
-			w.WriteHeader(http.StatusAccepted)
-			return
 		}
+		// Otherwise the transaction is just a duplicate
+		// The exactly duplicate transactions are ignored
+		log.Println("Transaction is duplicate:", transaction.ID)
+		w.WriteHeader(http.StatusAccepted)
+		return
 	}
 
 	// Otherwise, do transaction
 	done := transactionsDB.Transact(transaction)
-	if done {
-		w.WriteHeader(http.StatusCreated)
-		return
-	} else {
+	if !done {
 		log.Println("Transaction failed:", transaction.ID)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	w.WriteHeader(http.StatusCreated)
+	return
 }
 
+// GetTransactions returns the list of transactions that matches the search query
 func GetTransactions(w http.ResponseWriter, r *http.Request, context *ledgerContext.AppContext) {
-	defer r.Body.Close()
-	engine, aerr := models.NewSearchEngine(context.DB, "transactions")
-	if aerr != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Println("Error reading payload:", err)
 		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	engine, aerr := models.NewSearchEngine(context.DB, models.SearchNamespaceTransactions)
+	if aerr != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	query := string(body)
@@ -118,10 +130,10 @@ func GetTransactions(w http.ResponseWriter, r *http.Request, context *ledgerCont
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Write(data)
-
 	return
 }
 
+// UpdateTransaction updates the data of a transaction with the input ID
 func UpdateTransaction(w http.ResponseWriter, r *http.Request, context *ledgerContext.AppContext) {
 	transaction := &models.Transaction{}
 	err := unmarshalToTransaction(r, transaction)
@@ -131,9 +143,15 @@ func UpdateTransaction(w http.ResponseWriter, r *http.Request, context *ledgerCo
 		return
 	}
 
-	transactionDB := models.TransactionDB{DB: context.DB}
+	transactionDB := models.NewTransactionDB(context.DB)
 	// Check if a transaction with same ID already exists
-	if !transactionDB.IsExists(transaction.ID) {
+	isExists, err := transactionDB.IsExists(transaction.ID)
+	if err != nil {
+		log.Println("Error while checking for existing transaction:", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !isExists {
 		log.Println("Transaction doesn't exist:", transaction.ID)
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -141,12 +159,11 @@ func UpdateTransaction(w http.ResponseWriter, r *http.Request, context *ledgerCo
 
 	// Otherwise, update transaction
 	terr := transactionDB.UpdateTransaction(transaction)
-	if terr == nil {
-		w.WriteHeader(http.StatusOK)
-		return
-	} else {
+	if terr != nil {
 		log.Printf("Error while updating transaction: %v (%v)", transaction.ID, terr)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	w.WriteHeader(http.StatusOK)
+	return
 }

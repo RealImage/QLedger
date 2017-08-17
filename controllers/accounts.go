@@ -12,25 +12,24 @@ import (
 	"github.com/RealImage/QLedger/models"
 )
 
+// GetAccounts returns the list of accounts that matches the search query
 func GetAccounts(w http.ResponseWriter, r *http.Request, context *ledgerContext.AppContext) {
-	defer r.Body.Close()
-	engine, aerr := models.NewSearchEngine(context.DB, "accounts")
-	if aerr != nil {
-		log.Println("Error while creating Search Engine:", aerr)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Println("Error reading payload:", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-
+	defer r.Body.Close()
 	query := string(body)
 	log.Println("Query:", query)
 
+	engine, aerr := models.NewSearchEngine(context.DB, models.SearchNamespaceAccounts)
+	if aerr != nil {
+		log.Println("Error while creating Search Engine:", aerr)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	results, aerr := engine.Query(query)
 	if aerr != nil {
 		log.Println("Error while querying:", aerr)
@@ -53,7 +52,6 @@ func GetAccounts(w http.ResponseWriter, r *http.Request, context *ledgerContext.
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Write(data)
-
 	return
 }
 
@@ -76,6 +74,7 @@ func unmarshalToAccount(r *http.Request, account *models.Account) error {
 	return nil
 }
 
+// AddAccount creates a new account with the input ID and data
 func AddAccount(w http.ResponseWriter, r *http.Request, context *ledgerContext.AppContext) {
 	account := &models.Account{}
 	err := unmarshalToAccount(r, account)
@@ -86,26 +85,32 @@ func AddAccount(w http.ResponseWriter, r *http.Request, context *ledgerContext.A
 		return
 	}
 
-	accountsDB := models.AccountDB{DB: context.DB}
+	accountsDB := models.NewAccountDB(context.DB)
 	// Check if an account with same ID already exists
-	if accountsDB.IsExists(account.Id) {
-		log.Println("Account is conflicting:", account.Id)
+	isExists, err := accountsDB.IsExists(account.ID)
+	if err != nil {
+		log.Println("Error while checking for existing account:", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if isExists {
+		log.Println("Account is conflicting:", account.ID)
 		w.WriteHeader(http.StatusConflict)
 		return
 	}
 
 	// Otherwise, add account
 	aerr := accountsDB.CreateAccount(account)
-	if aerr == nil {
-		w.WriteHeader(http.StatusCreated)
-		return
-	} else {
-		log.Printf("Error while adding account: %v (%v)", account.Id, aerr)
+	if aerr != nil {
+		log.Printf("Error while adding account: %v (%v)", account.ID, aerr)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	w.WriteHeader(http.StatusCreated)
+	return
 }
 
+// UpdateAccount updates data of an account with the input ID
 func UpdateAccount(w http.ResponseWriter, r *http.Request, context *ledgerContext.AppContext) {
 	account := &models.Account{}
 	err := unmarshalToAccount(r, account)
@@ -115,22 +120,27 @@ func UpdateAccount(w http.ResponseWriter, r *http.Request, context *ledgerContex
 		return
 	}
 
-	accountsDB := models.AccountDB{DB: context.DB}
+	accountsDB := models.NewAccountDB(context.DB)
 	// Check if an account with same ID already exists
-	if !accountsDB.IsExists(account.Id) {
-		log.Println("Account doesn't exist:", account.Id)
+	isExists, err := accountsDB.IsExists(account.ID)
+	if err != nil {
+		log.Println("Error while checking for existing account:", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !isExists {
+		log.Println("Account doesn't exist:", account.ID)
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
 	// Otherwise, update account
 	aerr := accountsDB.UpdateAccount(account)
-	if aerr == nil {
-		w.WriteHeader(http.StatusOK)
-		return
-	} else {
-		log.Printf("Error while updating account: %v (%v)", account.Id, aerr)
+	if aerr != nil {
+		log.Printf("Error while updating account: %v (%v)", account.ID, aerr)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	w.WriteHeader(http.StatusOK)
+	return
 }

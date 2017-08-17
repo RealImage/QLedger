@@ -13,15 +13,19 @@ import (
 )
 
 var (
-	SearchNamespaceAccounts     = "accounts"
+	// SearchNamespaceAccounts holds search namespace of accounts
+	SearchNamespaceAccounts = "accounts"
+	// SearchNamespaceTransactions holds search namespace of transactions
 	SearchNamespaceTransactions = "transactions"
 )
 
+// SearchEngine is the interface for all search operations
 type SearchEngine struct {
 	db        *sql.DB
 	namespace string
 }
 
+// TransactionResult represents the response format of transactions
 type TransactionResult struct {
 	ID        string                   `json:"id"`
 	Timestamp string                   `json:"timestamp"`
@@ -29,17 +33,20 @@ type TransactionResult struct {
 	Lines     []*TransactionLineResult `json:"lines"`
 }
 
+// TransactionLineResult represents the response format of transaction lines
 type TransactionLineResult struct {
 	AccountID string `json:"account"`
 	Delta     int    `json:"delta"`
 }
 
+// AccountResult represents the response format of accounts
 type AccountResult struct {
 	ID      string          `json:"id"`
 	Balance int             `json:"balance"`
 	Data    json.RawMessage `json:"data"`
 }
 
+// NewSearchEngine returns a new instance of `SearchEngine`
 func NewSearchEngine(db *sql.DB, namespace string) (*SearchEngine, ledgerError.ApplicationError) {
 	if namespace != SearchNamespaceAccounts && namespace != SearchNamespaceTransactions {
 		return nil, SearchNamespaceInvalidError(namespace)
@@ -48,6 +55,7 @@ func NewSearchEngine(db *sql.DB, namespace string) (*SearchEngine, ledgerError.A
 	return &SearchEngine{db: db, namespace: namespace}, nil
 }
 
+// Query returns the results of a searc query
 func (engine *SearchEngine) Query(q string) (interface{}, ledgerError.ApplicationError) {
 	rawQuery, aerr := NewSearchRawQuery(q)
 	if aerr != nil {
@@ -99,17 +107,19 @@ func (engine *SearchEngine) Query(q string) (interface{}, ledgerError.Applicatio
 			transactions = append(transactions, txn)
 		}
 		return transactions, nil
+	default:
+		return nil, SearchNamespaceInvalidError(engine.namespace)
 	}
-
-	return nil, nil
 }
 
+// QueryContainer represents the format of query subsection inside `must` or `should`
 type QueryContainer struct {
 	Fields     []map[string]map[string]interface{} `json:"fields"`
 	Terms      []map[string]interface{}            `json:"terms"`
 	RangeItems []map[string]map[string]interface{} `json:"ranges"`
 }
 
+// SearchRawQuery represents the format of search query
 type SearchRawQuery struct {
 	Offset int `json:"from,omitempty"`
 	Limit  int `json:"size,omitempty"`
@@ -119,6 +129,7 @@ type SearchRawQuery struct {
 	} `json:"query"`
 }
 
+// SearchSQLQuery hold information of search SQL query
 type SearchSQLQuery struct {
 	sql  string
 	args []interface{}
@@ -150,23 +161,31 @@ func hasValidKeys(items interface{}) bool {
 	}
 }
 
+// NewSearchRawQuery returns a new instance of `SearchRawQuery`
 func NewSearchRawQuery(q string) (*SearchRawQuery, ledgerError.ApplicationError) {
 	var rawQuery *SearchRawQuery
 	err := json.Unmarshal([]byte(q), &rawQuery)
 	if err != nil {
 		return nil, SearchQueryInvalidError(err)
 	}
-	if !(hasValidKeys(rawQuery.Query.MustClause.Fields) &&
-		hasValidKeys(rawQuery.Query.MustClause.Terms) &&
-		hasValidKeys(rawQuery.Query.MustClause.RangeItems) &&
-		hasValidKeys(rawQuery.Query.ShouldClause.Fields) &&
-		hasValidKeys(rawQuery.Query.MustClause.Terms) &&
-		hasValidKeys(rawQuery.Query.MustClause.RangeItems)) {
-		return nil, SearchQueryInvalidError(errors.New("Invalid key(s) in search query"))
+
+	checkList := []interface{}{
+		rawQuery.Query.MustClause.Fields,
+		rawQuery.Query.MustClause.Terms,
+		rawQuery.Query.MustClause.RangeItems,
+		rawQuery.Query.ShouldClause.Fields,
+		rawQuery.Query.MustClause.Terms,
+		rawQuery.Query.MustClause.RangeItems,
+	}
+	for _, item := range checkList {
+		if !hasValidKeys(item) {
+			return nil, SearchQueryInvalidError(errors.New("Invalid key(s) in search query"))
+		}
 	}
 	return rawQuery, nil
 }
 
+// ToSQLQuery converts a raw search query to SQL format of the same
 func (rawQuery *SearchRawQuery) ToSQLQuery(namespace string) *SearchSQLQuery {
 	var q string
 	var args []interface{}

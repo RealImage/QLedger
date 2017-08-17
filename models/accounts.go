@@ -8,20 +8,28 @@ import (
 	ledgerError "github.com/RealImage/QLedger/errors"
 )
 
+// Account represents the ledger account with information such as ID, balance and JSON data
 type Account struct {
-	Id      string                 `json:"id"`
+	ID      string                 `json:"id"`
 	Balance int                    `json:"balance"`
 	Data    map[string]interface{} `json:"data"`
 }
 
+// AccountDB provides all functions related to ledger account
 type AccountDB struct {
-	DB *sql.DB `json:"-"`
+	db *sql.DB
 }
 
-func (a *AccountDB) GetByID(id string) (*Account, ledgerError.ApplicationError) {
-	account := &Account{Id: id}
+// NewAccountDB provides instance of `AccountDB`
+func NewAccountDB(db *sql.DB) AccountDB {
+	return AccountDB{db: db}
+}
 
-	err := a.DB.QueryRow("SELECT balance FROM current_balances WHERE id=$1", &id).Scan(&account.Balance)
+// GetByID returns an acccount with the given ID
+func (a *AccountDB) GetByID(id string) (*Account, ledgerError.ApplicationError) {
+	account := &Account{ID: id}
+
+	err := a.db.QueryRow("SELECT balance FROM current_balances WHERE id=$1", &id).Scan(&account.Balance)
 	switch {
 	case err == sql.ErrNoRows:
 		account.Balance = 0
@@ -32,15 +40,18 @@ func (a *AccountDB) GetByID(id string) (*Account, ledgerError.ApplicationError) 
 	return account, nil
 }
 
-func (a *AccountDB) IsExists(id string) bool {
+// IsExists says whether an account exists or not
+func (a *AccountDB) IsExists(id string) (bool, ledgerError.ApplicationError) {
 	var exists bool
-	err := a.DB.QueryRow("SELECT EXISTS (SELECT * FROM accounts WHERE id=$1)", id).Scan(&exists)
+	err := a.db.QueryRow("SELECT EXISTS (SELECT id FROM accounts WHERE id=$1)", id).Scan(&exists)
 	if err != nil {
 		log.Println("Error executing account exists query:", err)
+		return false, DBError(err)
 	}
-	return exists
+	return exists, nil
 }
 
+// CreateAccount creates a new account in the ledger
 func (a *AccountDB) CreateAccount(account *Account) ledgerError.ApplicationError {
 	data, err := json.Marshal(account.Data)
 	if err != nil {
@@ -53,7 +64,7 @@ func (a *AccountDB) CreateAccount(account *Account) ledgerError.ApplicationError
 	}
 
 	q := "INSERT INTO accounts (id, data)  VALUES ($1, $2)"
-	_, err = a.DB.Exec(q, account.Id, accountData)
+	_, err = a.db.Exec(q, account.ID, accountData)
 	if err != nil {
 		return DBError(err)
 	}
@@ -61,6 +72,7 @@ func (a *AccountDB) CreateAccount(account *Account) ledgerError.ApplicationError
 	return nil
 }
 
+// UpdateAccount updates the account with new data
 func (a *AccountDB) UpdateAccount(account *Account) ledgerError.ApplicationError {
 	data, err := json.Marshal(account.Data)
 	if err != nil {
@@ -72,7 +84,7 @@ func (a *AccountDB) UpdateAccount(account *Account) ledgerError.ApplicationError
 	}
 
 	q := "UPDATE accounts SET data = $1 WHERE id = $2"
-	_, err = a.DB.Exec(q, accountData, account.Id)
+	_, err = a.db.Exec(q, accountData, account.ID)
 	if err != nil {
 		return DBError(err)
 	}

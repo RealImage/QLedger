@@ -22,35 +22,10 @@ func main() {
 	}
 	log.Println("Successfully established connection to database.")
 
-	log.Println("Starting db schema migration...")
-	driver, err := postgres.WithInstance(db, &postgres.Config{})
-	if err != nil {
-		log.Panic("Unable to create database instance for migration:", err)
-	}
-
-	m, err := migrate.NewWithDatabaseInstance(
-		"file://migrations/postgres",
-		"postgres", driver)
-	if err != nil {
-		log.Panic("Unable to create Migrate instance for database:", err)
-	}
-
-	version, dirty, err := m.Version()
-	if err != nil && err != migrate.ErrNilVersion {
-		log.Panic("Unable to get current migration version for database:", dirty, err)
-	}
-	log.Println("Current schema version:", version)
-
-	err = m.Up()
-	if err != nil && err != migrate.ErrNoChange {
-		log.Panic("Error while migration:", err)
-	}
-
-	version, _, _ = m.Version()
-	log.Println("Migrated schema version:", version)
+	// Migrate DB changes
+	migrateDB(db)
 
 	appContext := &ledgerContext.AppContext{DB: db}
-
 	router := httprouter.New()
 
 	// Monitors
@@ -70,9 +45,9 @@ func main() {
 	router.HandlerFunc(http.MethodPut, "/v1/accounts", middlewares.ContextMiddleware(controllers.UpdateAccount, appContext))
 	router.HandlerFunc(http.MethodPut, "/v1/transactions", middlewares.ContextMiddleware(controllers.UpdateTransaction, appContext))
 
-	port := "7000"
-	if lp := os.Getenv("PORT"); lp != "" {
-		port = lp
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "7000"
 	}
 	log.Println("Running server on port:", port)
 	log.Fatal(http.ListenAndServe(":"+port, middlewares.TokenAuthMiddleware(router)))
@@ -82,4 +57,33 @@ func main() {
 			log.Println("Server exited!!!", r)
 		}
 	}()
+}
+
+func migrateDB(db *sql.DB) {
+	log.Println("Starting db schema migration...")
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	if err != nil {
+		log.Panic("Unable to create database instance for migration:", err)
+	}
+	m, err := migrate.NewWithDatabaseInstance(
+		"file://migrations/postgres",
+		"postgres", driver)
+	if err != nil {
+		log.Panic("Unable to create Migrate instance for database:", err)
+	}
+
+	version, dirty, err := m.Version()
+	if err != nil && err != migrate.ErrNilVersion {
+		log.Panic("Unable to get existing migration version for database:", dirty, err)
+	}
+	log.Println("Current schema version:", version)
+	err = m.Up()
+	if err != nil && err != migrate.ErrNoChange {
+		log.Panic("Error while migration:", err)
+	}
+	version, dirty, err = m.Version()
+	if err != nil {
+		log.Panic("Unable to get new migration version for database:", dirty, err)
+	}
+	log.Println("Migrated schema version:", version)
 }
