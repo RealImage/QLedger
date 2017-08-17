@@ -167,6 +167,35 @@ func (ts *TransactionsModelSuite) TestTransact() {
 	assert.Equal(t, done, false, "Transaction should not be created")
 }
 
+func (ts *TransactionsModelSuite) TestTransactWithBoundaryValues() {
+	t := ts.T()
+
+	transactionDB := TransactionDB{DB: ts.db}
+
+	boundaryValue := 9223372036854775807 // Max +ve for 2^64
+	transaction := &Transaction{
+		ID: "t004",
+		Lines: []*TransactionLine{
+			&TransactionLine{
+				AccountID: "a3",
+				Delta:     boundaryValue,
+			},
+			&TransactionLine{
+				AccountID: "a4",
+				Delta:     -boundaryValue,
+			},
+		},
+		Data: map[string]interface{}{
+			"tag1": "val1",
+			"tag2": "val2",
+		},
+	}
+	done := transactionDB.Transact(transaction)
+	assert.Equal(t, true, done, "Transaction should be created")
+	exists := transactionDB.IsExists("t004")
+	assert.Equal(t, true, exists, "Transaction should exist")
+}
+
 func (ts *TransactionsModelSuite) TearDownSuite() {
 	log.Println("Cleaning up the test database")
 
