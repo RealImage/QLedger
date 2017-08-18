@@ -18,21 +18,21 @@ CREATE TABLE accounts (
 CREATE TABLE current_balances (
     id character varying,
     data jsonb,
-    balance bigint
+    balance numeric
 );
 ALTER TABLE ONLY current_balances REPLICA IDENTITY NOTHING;
 CREATE TABLE lines (
     id bigint NOT NULL,
     transaction_id character varying NOT NULL,
     account_id character varying NOT NULL,
-    delta integer NOT NULL
+    delta bigint NOT NULL
 );
 CREATE VIEW invalid_transactions AS
  SELECT lines.transaction_id,
     sum(lines.delta) AS sum
    FROM lines
   GROUP BY lines.transaction_id
- HAVING (sum(lines.delta) > 0);
+ HAVING (sum(lines.delta) > (0)::numeric);
 CREATE SEQUENCE lines_id_seq
     START WITH 1
     INCREMENT BY 1
@@ -64,7 +64,7 @@ CREATE INDEX transactions_data_idx ON transactions USING gin (data jsonb_path_op
 CREATE RULE "_RETURN" AS
     ON SELECT TO current_balances DO INSTEAD  SELECT accounts.id,
     accounts.data,
-    COALESCE(sum(lines.delta), (0)::bigint) AS balance
+    COALESCE(sum(lines.delta), (0)::numeric) AS balance
    FROM (accounts
      LEFT JOIN lines ON (((accounts.id)::text = (lines.account_id)::text)))
   GROUP BY accounts.id;

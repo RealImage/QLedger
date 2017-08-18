@@ -193,6 +193,64 @@ func (ts *TransactionsSuite) TestFailTransaction() {
 	assert.Equal(t, http.StatusInternalServerError, rr.Code, "Invalid response code")
 }
 
+func (ts *TransactionsSuite) TestCreateTransactionWithBoundaryValues() {
+	t := ts.T()
+
+	// In-boundary value transaction
+	payload := `{
+	  "id": "t005",
+	  "lines": [
+	    {
+	      "account": "carly",
+	      "delta": 9223372036854775807
+	    },
+	    {
+	      "account": "dev",
+	      "delta": -9223372036854775807
+	    }
+	  ],
+	  "data": {
+	    "tag_one": "val1",
+	    "tag_two": "val2"
+	  }
+	}`
+	handler := middlewares.ContextMiddleware(MakeTransaction, ts.context)
+	req, err := http.NewRequest("POST", TransactionsAPI, bytes.NewBufferString(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+	rr1 := httptest.NewRecorder()
+	handler.ServeHTTP(rr1, req)
+	assert.Equal(t, http.StatusCreated, rr1.Code, "Invalid response code")
+
+	// Out-of-boundary value transaction
+	payload = `{
+	  "id": "t006",
+	  "lines": [
+	    {
+	      "account": "eve",
+	      "delta": 9223372036854775808
+	    },
+	    {
+	      "account": "foo",
+	      "delta": -9223372036854775808
+	    }
+	  ],
+	  "data": {
+	    "tag_one": "val1",
+	    "tag_two": "val2"
+	  }
+	}`
+	handler = middlewares.ContextMiddleware(MakeTransaction, ts.context)
+	req, err = http.NewRequest("POST", TransactionsAPI, bytes.NewBufferString(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+	rr1 = httptest.NewRecorder()
+	handler.ServeHTTP(rr1, req)
+	assert.Equal(t, http.StatusBadRequest, rr1.Code, "Invalid response code")
+}
+
 func (ts *TransactionsSuite) TearDownSuite() {
 	log.Println("Cleaning up the test database")
 
