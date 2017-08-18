@@ -55,8 +55,9 @@ func (ts *TransactionsModelSuite) TestIsValid() {
 func (ts *TransactionsModelSuite) TestIsExists() {
 	t := ts.T()
 
-	transactionDB := TransactionDB{DB: ts.db}
-	exists := transactionDB.IsExists("t001")
+	transactionDB := NewTransactionDB(ts.db)
+	exists, err := transactionDB.IsExists("t001")
+	assert.Equal(t, err, nil, "Error while checking for existing transaction")
 	assert.Equal(t, exists, false, "Transaction should not exist")
 
 	transaction := &Transaction{
@@ -75,14 +76,15 @@ func (ts *TransactionsModelSuite) TestIsExists() {
 	done := transactionDB.Transact(transaction)
 	assert.Equal(t, done, true, "Transaction should be created")
 
-	exists = transactionDB.IsExists("t001")
+	exists, err = transactionDB.IsExists("t001")
+	assert.Equal(t, err, nil, "Error while checking for existing transaction")
 	assert.Equal(t, exists, true, "Transaction should exist")
 }
 
 func (ts *TransactionsModelSuite) TestIsConflict() {
 	t := ts.T()
 
-	transactionDB := TransactionDB{DB: ts.db}
+	transactionDB := NewTransactionDB(ts.db)
 	transaction := &Transaction{
 		ID: "t002",
 		Lines: []*TransactionLine{
@@ -99,7 +101,8 @@ func (ts *TransactionsModelSuite) TestIsConflict() {
 	done := transactionDB.Transact(transaction)
 	assert.Equal(t, done, true, "Transaction should be created")
 
-	conflicts := transactionDB.IsConflict(transaction)
+	conflicts, err := transactionDB.IsConflict(transaction)
+	assert.Equal(t, err, nil, "Error while checking for conflict transaction")
 	assert.Equal(t, conflicts, false, "Transaction should not conflict")
 
 	transaction = &Transaction{
@@ -115,7 +118,8 @@ func (ts *TransactionsModelSuite) TestIsConflict() {
 			},
 		},
 	}
-	conflicts = transactionDB.IsConflict(transaction)
+	conflicts, err = transactionDB.IsConflict(transaction)
+	assert.Equal(t, err, nil, "Error while checking for conflicting transaction")
 	assert.Equal(t, conflicts, true, "Transaction should conflict since deltas are different from first received")
 
 	transaction = &Transaction{
@@ -131,14 +135,15 @@ func (ts *TransactionsModelSuite) TestIsConflict() {
 			},
 		},
 	}
-	conflicts = transactionDB.IsConflict(transaction)
+	conflicts, err = transactionDB.IsConflict(transaction)
+	assert.Equal(t, err, nil, "Error while checking for conflicting transaction")
 	assert.Equal(t, conflicts, true, "Transaction should conflict since accounts are different from first received")
 }
 
 func (ts *TransactionsModelSuite) TestTransact() {
 	t := ts.T()
 
-	transactionDB := TransactionDB{DB: ts.db}
+	transactionDB := NewTransactionDB(ts.db)
 
 	transaction := &Transaction{
 		ID: "t003",
@@ -160,7 +165,8 @@ func (ts *TransactionsModelSuite) TestTransact() {
 	done := transactionDB.Transact(transaction)
 	assert.Equal(t, done, true, "Transaction should be created")
 
-	exists := transactionDB.IsExists("t003")
+	exists, err := transactionDB.IsExists("t003")
+	assert.Equal(t, err, nil, "Error while checking for existing transaction")
 	assert.Equal(t, exists, true, "Transaction should exist")
 
 	done = transactionDB.Transact(transaction)

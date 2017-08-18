@@ -4,6 +4,7 @@ import (
 	"github.com/RealImage/QLedger/errors"
 )
 
+// SearchNamespaceInvalidError returns invalid search namespace error type
 func SearchNamespaceInvalidError(namespace string) errors.ApplicationError {
 	return &errors.BaseApplicationError{
 		Code:    "search.namespace.invalid",
@@ -11,6 +12,7 @@ func SearchNamespaceInvalidError(namespace string) errors.ApplicationError {
 	}
 }
 
+// SearchQueryInvalidError returns invalid search query error type
 func SearchQueryInvalidError(err error) errors.ApplicationError {
 	return &errors.BaseApplicationError{
 		Code:    "search.query.invalid",
@@ -18,6 +20,7 @@ func SearchQueryInvalidError(err error) errors.ApplicationError {
 	}
 }
 
+// DBError returns db error type
 func DBError(err error) errors.ApplicationError {
 	return &errors.BaseApplicationError{
 		Code:    "db.error",
@@ -25,6 +28,7 @@ func DBError(err error) errors.ApplicationError {
 	}
 }
 
+// JSONError returns invalid json error type
 func JSONError(err error) errors.ApplicationError {
 	return &errors.BaseApplicationError{
 		Code:    "json.error",

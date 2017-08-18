@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	TRANSACTIONS_SEARCH_API = "/v1/transactions"
+	TransactionsSearchAPI = "/v1/transactions"
 )
 
 type TransactionSearchSuite struct {
@@ -40,7 +40,7 @@ func (as *TransactionSearchSuite) SetupTest() {
 	as.context = &ledgerContext.AppContext{DB: db}
 
 	// Create test transactions
-	txnDB := models.TransactionDB{DB: db}
+	txnDB := models.NewTransactionDB(db)
 	txn1 := &models.Transaction{
 		ID: "txn1",
 		Lines: []*models.TransactionLine{
@@ -130,7 +130,7 @@ func (as *TransactionSearchSuite) TestTransactionsSearch() {
         }
     }`
 	handler := middlewares.ContextMiddleware(GetTransactions, as.context)
-	req, err := http.NewRequest("GET", TRANSACTIONS_SEARCH_API, bytes.NewBufferString(payload))
+	req, err := http.NewRequest("GET", TransactionsSearchAPI, bytes.NewBufferString(payload))
 	if err != nil {
 		t.Fatal(err)
 	}
