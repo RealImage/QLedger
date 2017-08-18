@@ -8,20 +8,28 @@ import (
 	ledgerError "github.com/RealImage/QLedger/errors"
 )
 
+// Account represents the ledger account with information such as ID, balance and JSON data
 type Account struct {
-	Id      string                 `json:"id"`
+	ID      string                 `json:"id"`
 	Balance int                    `json:"balance"`
 	Data    map[string]interface{} `json:"data"`
 }
 
+// AccountDB provides all functions related to ledger account
 type AccountDB struct {
-	DB *sql.DB `json:"-"`
+	db *sql.DB
 }
 
-func (adb *AccountDB) GetByID(id string) (*Account, ledgerError.ApplicationError) {
-	account := &Account{Id: id}
+// NewAccountDB provides instance of `AccountDB`
+func NewAccountDB(db *sql.DB) AccountDB {
+	return AccountDB{db: db}
+}
 
-	err := adb.DB.QueryRow("SELECT balance FROM current_balances WHERE id=$1", &id).Scan(&account.Balance)
+// GetByID returns an acccount with the given ID
+func (a *AccountDB) GetByID(id string) (*Account, ledgerError.ApplicationError) {
+	account := &Account{ID: id}
+
+	err := a.db.QueryRow("SELECT balance FROM current_balances WHERE id=$1", &id).Scan(&account.Balance)
 	switch {
 	case err == sql.ErrNoRows:
 		account.Balance = 0
@@ -32,47 +40,54 @@ func (adb *AccountDB) GetByID(id string) (*Account, ledgerError.ApplicationError
 	return account, nil
 }
 
-func (adb *AccountDB) IsExists(id string) bool {
+// IsExists says whether an account exists or not
+func (a *AccountDB) IsExists(id string) (bool, ledgerError.ApplicationError) {
 	var exists bool
-	err := adb.DB.QueryRow("SELECT EXISTS (SELECT * FROM accounts WHERE id=$1)", id).Scan(&exists)
+	err := a.db.QueryRow("SELECT EXISTS (SELECT id FROM accounts WHERE id=$1)", id).Scan(&exists)
 	if err != nil {
 		log.Println("Error executing account exists query:", err)
+		return false, DBError(err)
 	}
-	return exists
+	return exists, nil
 }
 
-func (adb *AccountDB) CreateAccount(account *Account) ledgerError.ApplicationError {
-	data, jerr := json.Marshal(account.Data)
-	if jerr != nil {
-		return JSONError(jerr)
+// CreateAccount creates a new account in the ledger
+func (a *AccountDB) CreateAccount(account *Account) ledgerError.ApplicationError {
+	data, err := json.Marshal(account.Data)
+	if err != nil {
+		return JSONError(err)
 	}
+
 	accountData := "{}"
 	if account.Data != nil && data != nil {
 		accountData = string(data)
 	}
 
-	sql := "INSERT INTO accounts (id, data)  VALUES ($1, $2)"
-	_, derr := adb.DB.Exec(sql, account.Id, accountData)
-	if derr != nil {
-		return DBError(derr)
+	q := "INSERT INTO accounts (id, data)  VALUES ($1, $2)"
+	_, err = a.db.Exec(q, account.ID, accountData)
+	if err != nil {
+		return DBError(err)
 	}
+
 	return nil
 }
 
-func (adb *AccountDB) UpdateAccount(account *Account) ledgerError.ApplicationError {
-	data, jerr := json.Marshal(account.Data)
-	if jerr != nil {
-		return JSONError(jerr)
+// UpdateAccount updates the account with new data
+func (a *AccountDB) UpdateAccount(account *Account) ledgerError.ApplicationError {
+	data, err := json.Marshal(account.Data)
+	if err != nil {
+		return JSONError(err)
 	}
 	accountData := "{}"
 	if account.Data != nil && data != nil {
 		accountData = string(data)
 	}
 
-	sql := "UPDATE accounts SET data = $1 WHERE id = $2"
-	_, derr := adb.DB.Exec(sql, accountData, account.Id)
-	if derr != nil {
-		return DBError(derr)
+	q := "UPDATE accounts SET data = $1 WHERE id = $2"
+	_, err = a.db.Exec(q, accountData, account.ID)
+	if err != nil {
+		return DBError(err)
 	}
+
 	return nil
 }

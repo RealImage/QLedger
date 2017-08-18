@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	TRANSACTIONS_API = "/v1/transactions"
+	TransactionsAPI = "/v1/transactions"
 )
 
 type TransactionsSuite struct {
@@ -60,7 +60,7 @@ func (ts *TransactionsSuite) TestValidAndRepeatedTransaction() {
 	  }
 	}`
 	handler := middlewares.ContextMiddleware(MakeTransaction, ts.context)
-	req, err := http.NewRequest("POST", TRANSACTIONS_API, bytes.NewBufferString(payload))
+	req, err := http.NewRequest("POST", TransactionsAPI, bytes.NewBufferString(payload))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +69,7 @@ func (ts *TransactionsSuite) TestValidAndRepeatedTransaction() {
 	assert.Equal(t, http.StatusCreated, rr1.Code, "Invalid response code")
 
 	// Duplicate transaction
-	req, err = http.NewRequest("POST", TRANSACTIONS_API, bytes.NewBufferString(payload))
+	req, err = http.NewRequest("POST", TransactionsAPI, bytes.NewBufferString(payload))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +91,7 @@ func (ts *TransactionsSuite) TestValidAndRepeatedTransaction() {
 	    }
 	  ]
 	}`
-	req, err = http.NewRequest("POST", TRANSACTIONS_API, bytes.NewBufferString(payload))
+	req, err = http.NewRequest("POST", TransactionsAPI, bytes.NewBufferString(payload))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,7 +109,7 @@ func (ts *TransactionsSuite) TestNoOpTransaction() {
 	}`
 
 	handler := middlewares.ContextMiddleware(MakeTransaction, ts.context)
-	req, err := http.NewRequest("POST", TRANSACTIONS_API, bytes.NewBufferString(payload))
+	req, err := http.NewRequest("POST", TransactionsAPI, bytes.NewBufferString(payload))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,7 +136,7 @@ func (ts *TransactionsSuite) TestInvalidTransaction() {
 	}`
 
 	handler := middlewares.ContextMiddleware(MakeTransaction, ts.context)
-	req, err := http.NewRequest("POST", TRANSACTIONS_API, bytes.NewBufferString(payload))
+	req, err := http.NewRequest("POST", TransactionsAPI, bytes.NewBufferString(payload))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -153,7 +153,7 @@ func (ts *TransactionsSuite) TestBadTransaction() {
 	}`
 
 	handler := middlewares.ContextMiddleware(MakeTransaction, ts.context)
-	req, err := http.NewRequest("POST", TRANSACTIONS_API, bytes.NewBufferString(payload))
+	req, err := http.NewRequest("POST", TransactionsAPI, bytes.NewBufferString(payload))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -184,7 +184,7 @@ func (ts *TransactionsSuite) TestFailTransaction() {
 	invalidContext := &ledgerContext.AppContext{DB: db}
 
 	handler := middlewares.ContextMiddleware(MakeTransaction, invalidContext)
-	req, err := http.NewRequest("POST", TRANSACTIONS_API, bytes.NewBufferString(payload))
+	req, err := http.NewRequest("POST", TransactionsAPI, bytes.NewBufferString(payload))
 	if err != nil {
 		t.Fatal(err)
 	}

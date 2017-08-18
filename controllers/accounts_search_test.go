@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	ACCOUNTS_SEARCH_API = "/v1/accounts"
+	AccountSearchAPI = "/v1/accounts"
 )
 
 type AccountsSearchSuite struct {
@@ -40,9 +40,9 @@ func (as *AccountsSearchSuite) SetupTest() {
 	as.context = &ledgerContext.AppContext{DB: db}
 
 	// Create test accounts
-	accDB := models.AccountDB{DB: db}
+	accDB := models.NewAccountDB(db)
 	acc1 := &models.Account{
-		Id: "acc1",
+		ID: "acc1",
 		Data: map[string]interface{}{
 			"customer_id": "C1",
 			"status":      "active",
@@ -52,7 +52,7 @@ func (as *AccountsSearchSuite) SetupTest() {
 	err = accDB.CreateAccount(acc1)
 	assert.Equal(t, nil, err, "Error creating test account")
 	acc2 := &models.Account{
-		Id: "acc2",
+		ID: "acc2",
 		Data: map[string]interface{}{
 			"customer_id": "C2",
 			"status":      "inactive",
@@ -88,7 +88,7 @@ func (as *AccountsSearchSuite) TestAccountsSearch() {
         }
     }`
 	handler := middlewares.ContextMiddleware(GetAccounts, as.context)
-	req, err := http.NewRequest("GET", ACCOUNTS_SEARCH_API, bytes.NewBufferString(payload))
+	req, err := http.NewRequest("GET", AccountSearchAPI, bytes.NewBufferString(payload))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -8,11 +8,12 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
+// TokenAuthMiddleware is a middleware that provides authentication functionality
 func TokenAuthMiddleware(router *httprouter.Router) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Check whether token authentication enabled
 		envToken := strings.TrimSpace(os.Getenv("LEDGER_AUTH_TOKEN"))
-		if len(envToken) != 0 {
+		if envToken != "" {
 			// Get the token in the header
 			requestToken := strings.TrimSpace(r.Header.Get("LEDGER-AUTH-TOKEN"))
 			// Validate token
