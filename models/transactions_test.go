@@ -176,7 +176,7 @@ func (ts *TransactionsModelSuite) TestTransact() {
 func (ts *TransactionsModelSuite) TestTransactWithBoundaryValues() {
 	t := ts.T()
 
-	transactionDB := TransactionDB{DB: ts.db}
+	transactionDB := NewTransactionDB(ts.db)
 
 	boundaryValue := 9223372036854775807 // Max +ve for 2^64
 	transaction := &Transaction{
@@ -198,7 +198,8 @@ func (ts *TransactionsModelSuite) TestTransactWithBoundaryValues() {
 	}
 	done := transactionDB.Transact(transaction)
 	assert.Equal(t, true, done, "Transaction should be created")
-	exists := transactionDB.IsExists("t004")
+	exists, err := transactionDB.IsExists("t004")
+	assert.Equal(t, nil, err, "Error while checking for existing transaction")
 	assert.Equal(t, true, exists, "Transaction should exist")
 }
 
