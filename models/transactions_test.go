@@ -178,6 +178,7 @@ func (ts *TransactionsModelSuite) TestTransactWithBoundaryValues() {
 
 	transactionDB := NewTransactionDB(ts.db)
 
+	// In-boundary value transaction
 	boundaryValue := 9223372036854775807 // Max +ve for 2^64
 	transaction := &Transaction{
 		ID: "t004",
@@ -201,6 +202,11 @@ func (ts *TransactionsModelSuite) TestTransactWithBoundaryValues() {
 	exists, err := transactionDB.IsExists("t004")
 	assert.Equal(t, nil, err, "Error while checking for existing transaction")
 	assert.Equal(t, true, exists, "Transaction should exist")
+
+	// Out-of-boundary value transaction
+	// Note: Not able write test case for out of boundary value here,
+	// due to overflow error while compilation.
+	// The test case is written in `package controllers` using JSON
 }
 
 func (ts *TransactionsModelSuite) TearDownSuite() {
