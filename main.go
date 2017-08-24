@@ -65,8 +65,13 @@ func migrateDB(db *sql.DB) {
 	if err != nil {
 		log.Panic("Unable to create database instance for migration:", err)
 	}
+
+	migrationFilesPath := os.Getenv("MIGRATION_FILES_PATH")
+	if migrationFilesPath == "" {
+		migrationFilesPath = "file://migrations/postgres"
+	}
 	m, err := migrate.NewWithDatabaseInstance(
-		"file://migrations/postgres",
+		migrationFilesPath,
 		"postgres", driver)
 	if err != nil {
 		log.Panic("Unable to create Migrate instance for database:", err)
