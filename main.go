@@ -83,7 +83,7 @@ func migrateDB(db *sql.DB) {
 	}
 	log.Println("Current schema version:", version)
 	err = m.Up()
-	if err != nil && err != migrate.ErrNoChange {
+	if err != nil && err != migrate.ErrNoChange && err != migrate.ErrLocked {
 		log.Panic("Error while migration:", err)
 	}
 	version, dirty, err = m.Version()
