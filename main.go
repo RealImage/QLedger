@@ -33,25 +33,41 @@ func main() {
 	router.HandlerFunc(http.MethodGet, hostPrefix+"/ping", controllers.Ping)
 
 	// Create accounts and transactions
-	router.HandlerFunc(http.MethodPost, hostPrefix+"/v1/accounts", middlewares.ContextMiddleware(controllers.AddAccount, appContext))
-	router.HandlerFunc(http.MethodPost, hostPrefix+"/v1/transactions", middlewares.ContextMiddleware(controllers.MakeTransaction, appContext))
+	router.HandlerFunc(http.MethodPost, hostPrefix+"/v1/accounts",
+		middlewares.TokenAuthMiddleware(
+			middlewares.ContextMiddleware(controllers.AddAccount, appContext)))
+	router.HandlerFunc(http.MethodPost, hostPrefix+"/v1/transactions",
+		middlewares.TokenAuthMiddleware(
+			middlewares.ContextMiddleware(controllers.MakeTransaction, appContext)))
 
 	// Read or search accounts and transactions
-	router.HandlerFunc(http.MethodGet, hostPrefix+"/v1/accounts", middlewares.ContextMiddleware(controllers.GetAccounts, appContext))
-	router.HandlerFunc(http.MethodPost, hostPrefix+"/v1/accounts/_search", middlewares.ContextMiddleware(controllers.GetAccounts, appContext))
-	router.HandlerFunc(http.MethodGet, hostPrefix+"/v1/transactions", middlewares.ContextMiddleware(controllers.GetTransactions, appContext))
-	router.HandlerFunc(http.MethodPost, hostPrefix+"/v1/transactions/_search", middlewares.ContextMiddleware(controllers.GetTransactions, appContext))
+	router.HandlerFunc(http.MethodGet, hostPrefix+"/v1/accounts",
+		middlewares.TokenAuthMiddleware(
+			middlewares.ContextMiddleware(controllers.GetAccounts, appContext)))
+	router.HandlerFunc(http.MethodPost, hostPrefix+"/v1/accounts/_search",
+		middlewares.TokenAuthMiddleware(
+			middlewares.ContextMiddleware(controllers.GetAccounts, appContext)))
+	router.HandlerFunc(http.MethodGet, hostPrefix+"/v1/transactions",
+		middlewares.TokenAuthMiddleware(
+			middlewares.ContextMiddleware(controllers.GetTransactions, appContext)))
+	router.HandlerFunc(http.MethodPost, hostPrefix+"/v1/transactions/_search",
+		middlewares.TokenAuthMiddleware(
+			middlewares.ContextMiddleware(controllers.GetTransactions, appContext)))
 
 	// Update data of accounts and transactions
-	router.HandlerFunc(http.MethodPut, hostPrefix+"/v1/accounts", middlewares.ContextMiddleware(controllers.UpdateAccount, appContext))
-	router.HandlerFunc(http.MethodPut, hostPrefix+"/v1/transactions", middlewares.ContextMiddleware(controllers.UpdateTransaction, appContext))
+	router.HandlerFunc(http.MethodPut, hostPrefix+"/v1/accounts",
+		middlewares.TokenAuthMiddleware(
+			middlewares.ContextMiddleware(controllers.UpdateAccount, appContext)))
+	router.HandlerFunc(http.MethodPut, hostPrefix+"/v1/transactions",
+		middlewares.TokenAuthMiddleware(
+			middlewares.ContextMiddleware(controllers.UpdateTransaction, appContext)))
 
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "7000"
 	}
 	log.Println("Running server on port:", port)
-	log.Fatal(http.ListenAndServe(":"+port, middlewares.TokenAuthMiddleware(router)))
+	log.Fatal(http.ListenAndServe(":"+port, router))
 
 	defer func() {
 		if r := recover(); r != nil {
