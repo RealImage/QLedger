@@ -1,13 +1,10 @@
 package middlewares
 
 import (
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
-
-	"github.com/julienschmidt/httprouter"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -15,59 +12,55 @@ import (
 
 type AuthSuite struct {
 	suite.Suite
-	authServer *httptest.Server
+	handler http.HandlerFunc
 }
 
 func (as *AuthSuite) SetupSuite() {
-	router := httprouter.New()
-	router.HandlerFunc("GET", "/", func(w http.ResponseWriter, r *http.Request) {
+	as.handler = TokenAuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
 	})
-	as.authServer = httptest.NewServer(TokenAuthMiddleware(router))
 }
 
 func (as *AuthSuite) TestNoAuth() {
 	t := as.T()
 	os.Unsetenv("LEDGER_AUTH_TOKEN")
 
-	resp, err := http.Get(as.authServer.URL)
+	req, err := http.NewRequest("GET", "/", nil)
 	if err != nil {
-		log.Panic("Error connecting test server:", err)
+		t.Fatal(err)
 	}
-	assert.Equal(t, http.StatusOK, resp.StatusCode, "Invalid response code")
+	rr1 := httptest.NewRecorder()
+	as.handler.ServeHTTP(rr1, req)
+	assert.Equal(t, http.StatusOK, rr1.Code, "Invalid response code")
 }
 
 func (as *AuthSuite) TestValidAuth() {
 	t := as.T()
 	os.Setenv("LEDGER_AUTH_TOKEN", "XXX")
 
-	req, _ := http.NewRequest("GET", as.authServer.URL, nil)
-	req.Header.Add("LEDGER-AUTH-TOKEN", "XXX")
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	req, err := http.NewRequest("GET", "/", nil)
+	req.Header.Add("Authorization", "XXX")
 	if err != nil {
-		log.Panic("Error connecting test server:", err)
+		t.Fatal(err)
 	}
-	assert.Equal(t, http.StatusOK, resp.StatusCode, "Invalid response code")
+	rr1 := httptest.NewRecorder()
+	as.handler.ServeHTTP(rr1, req)
+	assert.Equal(t, http.StatusOK, rr1.Code, "Invalid response code")
 }
 
 func (as *AuthSuite) TestInvalidAuth() {
 	t := as.T()
 	os.Setenv("LEDGER_AUTH_TOKEN", "XXX")
 
-	req, _ := http.NewRequest("GET", as.authServer.URL, nil)
-	req.Header.Add("LEDGER-AUTH-TOKEN", "XYZ")
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	req, err := http.NewRequest("GET", "/", nil)
+	req.Header.Add("Authorization", "XYZ")
 	if err != nil {
-		log.Panic("Error connecting test server:", err)
+		t.Fatal(err)
 	}
-	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode, "Invalid response code")
-}
-
-func (as *AuthSuite) TearDownSuite() {
-	as.authServer.Close()
+	rr1 := httptest.NewRecorder()
+	as.handler.ServeHTTP(rr1, req)
+	assert.Equal(t, http.StatusUnauthorized, rr1.Code, "Invalid response code")
 }
 
 func TestAuthSuite(t *testing.T) {
