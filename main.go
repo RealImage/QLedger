@@ -11,6 +11,7 @@ import (
 	"github.com/RealImage/QLedger/middlewares"
 	"github.com/julienschmidt/httprouter"
 	"github.com/mattes/migrate"
+	"github.com/mattes/migrate/database"
 	"github.com/mattes/migrate/database/postgres"
 	_ "github.com/mattes/migrate/source/file"
 )
@@ -100,8 +101,15 @@ func migrateDB(db *sql.DB) {
 	}
 	log.Println("Current schema version:", version)
 	err = m.Up()
-	if err != nil && err != migrate.ErrNoChange && err != migrate.ErrLocked {
-		log.Panic("Error while migration:", err)
+	if err != nil {
+		switch err {
+		case migrate.ErrNoChange:
+			log.Println("No changes to migrate")
+		case migrate.ErrLocked, database.ErrLocked:
+			log.Println("Database locked. Skipping migration assuming another instance working on it")
+		default:
+			log.Panic("Error while migration:", err)
+		}
 	}
 	version, dirty, err = m.Version()
 	if err != nil {
