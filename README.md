@@ -139,8 +139,11 @@ Example fields:
 - Field `{"id": {"eq": "ACME.CREDIT"}}` filters items where the column `id` is equal to `ACME.CREDIT`
 - Field `{"balance": {"lt": 0}}` filters items where the column `balance` is less than `0`
 - Field `{"timestamp": {"gte": "2017-01-01T05:30"}}` filters items where `timestamp` is greater than or equal to `2017-01-01T05:30`
+- Field `{"id": {"ne": "ACME.CREDIT"}}` filters items where the column `id` is not equal to `ACME.CREDIT`
+- Field `{"id": {"like": "%.DEBIT"}}` filters items where the column `id` ends with `.DEBIT`
+- Field `{"id": {"notlike": "%.DEBIT"}}` filters items where the column `id` doesn't ends with `.DEBIT`
 
-> The supported range operators are `lt`(less than), `lte`(less than or equal), `gt`(greater than), `gte`(greater than or equal), `eq`(equal).
+> The supported range operators are `lt`(less than), `lte`(less than or equal), `gt`(greater than), `gte`(greater than or equal), `eq`(equal), `ne`(not equal), `like`(like patterns), `notlike`(not like patterns).
 
 ###### - `terms` query
 
