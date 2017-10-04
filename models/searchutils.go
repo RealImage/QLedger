@@ -34,6 +34,12 @@ func sqlComparisonOp(op string) string {
 		return ">="
 	case "lte":
 		return "<="
+	case "ne":
+		return "!="
+	case "like":
+		return "LIKE"
+	case "notlike":
+		return "NOT LIKE"
 	}
 	return "="
 }
