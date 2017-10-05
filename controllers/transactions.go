@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"time"
 
 	ledgerContext "github.com/RealImage/QLedger/context"
 	"github.com/RealImage/QLedger/models"
@@ -28,6 +29,14 @@ func unmarshalToTransaction(r *http.Request, txn *models.Transaction) error {
 			return fmt.Errorf("Invalid key in data json: %v", key)
 		}
 	}
+	// Validate timestamp format if present
+	if txn.Timestamp != "" {
+		_, err := time.Parse(models.LedgerTimestampLayout, txn.Timestamp)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
