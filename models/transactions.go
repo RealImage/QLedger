@@ -11,6 +11,11 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	// LedgerTimestampLayout is the timestamp layout followed in Ledger
+	LedgerTimestampLayout = "2006-01-02 15:04:05.000"
+)
+
 // Transaction represents a transaction in a ledger
 type Transaction struct {
 	ID        string                 `json:"id"`
@@ -122,7 +127,11 @@ func (t *TransactionDB) Transact(txn *Transaction) bool {
 		transactionData = string(data)
 	}
 
-	_, err = tx.Exec("INSERT INTO transactions (id, timestamp, data) VALUES ($1, $2, $3)", txn.ID, time.Now().UTC(), transactionData)
+	if txn.Timestamp == "" {
+		txn.Timestamp = time.Now().UTC().Format(LedgerTimestampLayout)
+	}
+
+	_, err = tx.Exec("INSERT INTO transactions (id, timestamp, data) VALUES ($1, $2, $3)", txn.ID, txn.Timestamp, transactionData)
 	if err != nil {
 		return handleTransactionError(tx, errors.Wrap(err, "insert transaction failed"))
 	}
