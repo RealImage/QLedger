@@ -115,7 +115,6 @@ func GetTransactions(w http.ResponseWriter, r *http.Request, context *ledgerCont
 		return
 	}
 	query := string(body)
-	log.Println("Query:", query)
 
 	results, aerr := engine.Query(query)
 	if aerr != nil {
