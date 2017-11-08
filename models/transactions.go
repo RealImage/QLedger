@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"log"
-	"reflect"
 	"time"
 
 	ledgerError "github.com/RealImage/QLedger/errors"
@@ -84,7 +83,7 @@ func (t *TransactionDB) IsConflict(transaction *Transaction) (bool, ledgerError.
 	}
 
 	// Compare new and existing transaction lines
-	return !reflect.DeepEqual(transaction.Lines, existingLines), nil
+	return !containsSameElements(transaction.Lines, existingLines), nil
 }
 
 // Transact creates the input transaction in the DB
