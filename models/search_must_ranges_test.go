@@ -73,3 +73,73 @@ func (ss *SearchSuite) TestSearchTransactionsWithMustRanges() {
 	transactions, _ = results.([]*TransactionResult)
 	assert.Equal(t, 0, len(transactions), "No transaction should exist for given query")
 }
+
+func (ss *SearchSuite) TestSearchTransactionsWithIsOperator() {
+	t := ss.T()
+	engine, _ := NewSearchEngine(ss.db, "transactions")
+
+	// Test IS operator
+	query := `{
+		"query": {
+			"must": {
+				"ranges": [
+					{"type": {"is": null}}
+				]
+			}
+		}
+	}`
+	results, err := engine.Query(query)
+	assert.Equal(t, nil, err, "Error in building search query")
+	transactions, _ := results.([]*TransactionResult)
+	assert.Equal(t, 3, len(transactions), "Transactions count doesn't match")
+
+	// Test IS NOT operator
+	query = `{
+		"query": {
+			"must": {
+				"ranges": [
+					{"action": {"isnot": null}}
+				]
+			}
+		}
+	}`
+	results, err = engine.Query(query)
+	assert.Equal(t, nil, err, "Error in building search query")
+	transactions, _ = results.([]*TransactionResult)
+	assert.Equal(t, 3, len(transactions), "Transactions count doesn't match")
+}
+
+func (ss *SearchSuite) TestSearchAccountsWithInOperator() {
+	t := ss.T()
+	engine, _ := NewSearchEngine(ss.db, "accounts")
+
+	// Test IS operator
+	query := `{
+		"query": {
+			"must": {
+				"ranges": [
+					{"customer_id": {"in": ["C1", "C2", "C3"]}}
+				]
+			}
+		}
+	}`
+	results, err := engine.Query(query)
+	assert.Equal(t, nil, err, "Error in building search query")
+	accounts, _ := results.([]*AccountResult)
+	assert.Equal(t, 2, len(accounts), "Accounts count doesn't match")
+
+	// Test IS NOT operator
+	query = `{
+		"query": {
+			"must": {
+				"ranges": [
+					{"customer_id": {"in": ["C2", "C3", "C4"]}}
+				]
+			}
+		}
+	}`
+	results, err = engine.Query(query)
+	assert.Equal(t, nil, err, "Error in building search query")
+	accounts, _ = results.([]*AccountResult)
+	assert.Equal(t, 1, len(accounts), "Accounts count doesn't match")
+}
