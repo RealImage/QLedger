@@ -59,9 +59,12 @@ ALTER TABLE ONLY schema_migrations
 ALTER TABLE ONLY transactions
     ADD CONSTRAINT transactions_pkey PRIMARY KEY (id);
 CREATE INDEX accounts_data_idx ON accounts USING gin (data jsonb_path_ops);
+CREATE INDEX accounts_data_type_idx ON accounts USING gin (((data -> 'type'::text)));
 CREATE INDEX lines_account_id_idx ON lines USING btree (account_id);
 CREATE INDEX lines_transaction_id_idx ON lines USING btree (transaction_id);
 CREATE INDEX timestamp_idx ON transactions USING brin ("timestamp");
+CREATE INDEX transactions_data_action_idx ON transactions USING gin (((data -> 'action'::text)));
+CREATE INDEX transactions_data_company_idx ON transactions USING gin (((data -> 'company'::text)));
 CREATE INDEX transactions_data_idx ON transactions USING gin (data jsonb_path_ops);
 CREATE RULE "_RETURN" AS
     ON SELECT TO current_balances DO INSTEAD  SELECT accounts.id,
