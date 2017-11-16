@@ -106,7 +106,11 @@ func convertRangesToSQL(ranges []map[string]map[string]interface{}) (where []str
 			for op, value := range comparison {
 				condn, arguments := getSQLConditionAndArgsFromRange(key, op, value)
 				conditions = append(conditions, condn)
-				args = append(args, arguments...)
+				for _, arg := range arguments {
+					if arg != nil {
+						args = append(args, arg)
+					}
+				}
 			}
 		}
 		where = append(where, "("+strings.Join(conditions, " AND ")+")")
@@ -121,7 +125,7 @@ func getSQLConditionAndArgsFromRange(key string, op string, value interface{}) (
 			condn = fmt.Sprintf("(data->>'%s')::float %s ?", key, sqlComparisonOp(op))
 			arg = val
 		case nil:
-			condn = fmt.Sprintf("data->>'%s' %s ?", key, sqlComparisonOp(op))
+			condn = fmt.Sprintf("data->>'%s' %s null", key, sqlComparisonOp(op))
 			arg = nil
 		default:
 			condn = fmt.Sprintf("data->>'%s' %s ?", key, sqlComparisonOp(op))
