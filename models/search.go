@@ -256,6 +256,10 @@ func (rawQuery *SearchRawQuery) ToSQLQuery(namespace string) *SearchSQLQuery {
 		q = q + "(" + strings.Join(shouldWhere, " OR ") + ")"
 	}
 
+	if namespace == "transactions" {
+		q = q + " ORDER BY timestamp"
+	}
+
 	if offset > 0 {
 		q = q + " OFFSET " + strconv.Itoa(offset) + " "
 	}
