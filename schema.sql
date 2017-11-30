@@ -49,10 +49,6 @@ CREATE TABLE transactions (
     "timestamp" timestamp without time zone NOT NULL,
     data jsonb DEFAULT '{}'::jsonb NOT NULL
 );
-CREATE TABLE u (
-    uuid uuid NOT NULL,
-    payload character(300)
-);
 ALTER TABLE ONLY lines ALTER COLUMN id SET DEFAULT nextval('lines_id_seq'::regclass);
 ALTER TABLE ONLY accounts
     ADD CONSTRAINT accounts_pkey PRIMARY KEY (id);
@@ -62,8 +58,6 @@ ALTER TABLE ONLY schema_migrations
     ADD CONSTRAINT schema_migrations_pkey PRIMARY KEY (version);
 ALTER TABLE ONLY transactions
     ADD CONSTRAINT transactions_pkey PRIMARY KEY (id);
-ALTER TABLE ONLY u
-    ADD CONSTRAINT u_pkey PRIMARY KEY (uuid);
 CREATE INDEX accounts_data_idx ON accounts USING gin (data jsonb_path_ops);
 CREATE INDEX accounts_data_type_idx ON accounts USING gin (((data -> 'type'::text)));
 CREATE INDEX lines_account_id_idx ON lines USING btree (account_id);
