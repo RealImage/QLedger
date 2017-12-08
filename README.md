@@ -142,6 +142,7 @@ An account with ID `alice` can be created with `data` as follows:
 ```
 
 An account can be updated with `data` as follows:
+
 `PUT /v1/accounts`
 ```
 {
