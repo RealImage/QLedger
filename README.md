@@ -273,3 +273,5 @@ Example: The following query matches requests to match transactions which satisf
 -  Clients those doesn't support passing search payload in the `GET`, can alternatively use the `POST`  endpoints: `POST /v1/transactions/_search` and `POST /v1/accounts/_search`.
 
 - A search query can have both `must` and `should` clauses.
+
+- Transactions in the search result are ordered chronological by default.
