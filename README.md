@@ -276,3 +276,8 @@ Example: The following query matches requests to match transactions which satisf
 - A search query can have both `must` and `should` clauses.
 
 - Transactions in the search result are ordered chronological by default.
+
+
+## Environment Variables:
+
+Please read the documentation of all QLedger environment variables [here](./context#environment-variables)
