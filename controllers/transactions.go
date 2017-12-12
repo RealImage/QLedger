@@ -83,7 +83,7 @@ func MakeTransaction(w http.ResponseWriter, r *http.Request, context *ledgerCont
 		}
 		// Otherwise the transaction is just a duplicate
 		// The exactly duplicate transactions are ignored
-		log.Println("Transaction is duplicate:", transaction.ID)
+		// log.Println("Transaction is duplicate:", transaction.ID)
 		w.WriteHeader(http.StatusAccepted)
 		return
 	}
@@ -115,7 +115,6 @@ func GetTransactions(w http.ResponseWriter, r *http.Request, context *ledgerCont
 		return
 	}
 	query := string(body)
-	log.Println("Query:", query)
 
 	results, aerr := engine.Query(query)
 	if aerr != nil {

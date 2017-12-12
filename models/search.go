@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"log"
 	"regexp"
 	"strconv"
 	"strings"
@@ -63,8 +62,6 @@ func (engine *SearchEngine) Query(q string) (interface{}, ledgerError.Applicatio
 	}
 
 	sqlQuery := rawQuery.ToSQLQuery(engine.namespace)
-	log.Println("sqlQuery SQL:", sqlQuery.sql)
-	log.Println("sqlQuery args:", sqlQuery.args)
 	rows, err := engine.db.Query(sqlQuery.sql, sqlQuery.args...)
 	if err != nil {
 		return nil, DBError(err)
@@ -257,6 +254,10 @@ func (rawQuery *SearchRawQuery) ToSQLQuery(namespace string) *SearchSQLQuery {
 
 	if len(shouldWhere) != 0 {
 		q = q + "(" + strings.Join(shouldWhere, " OR ") + ")"
+	}
+
+	if namespace == "transactions" {
+		q = q + " ORDER BY timestamp"
 	}
 
 	if offset > 0 {

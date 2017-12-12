@@ -59,6 +59,8 @@ ALTER TABLE ONLY schema_migrations
 ALTER TABLE ONLY transactions
     ADD CONSTRAINT transactions_pkey PRIMARY KEY (id);
 CREATE INDEX accounts_data_idx ON accounts USING gin (data jsonb_path_ops);
+CREATE INDEX lines_account_id_idx ON lines USING btree (account_id);
+CREATE INDEX lines_transaction_id_idx ON lines USING btree (transaction_id);
 CREATE INDEX timestamp_idx ON transactions USING brin ("timestamp");
 CREATE INDEX transactions_data_idx ON transactions USING gin (data jsonb_path_ops);
 CREATE RULE "_RETURN" AS

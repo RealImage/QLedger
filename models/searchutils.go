@@ -34,6 +34,16 @@ func sqlComparisonOp(op string) string {
 		return ">="
 	case "lte":
 		return "<="
+	case "ne":
+		return "!="
+	case "like":
+		return "LIKE"
+	case "notlike":
+		return "NOT LIKE"
+	case "is":
+		return "IS"
+	case "isnot":
+		return "IS NOT"
 	}
 	return "="
 }
@@ -94,18 +104,59 @@ func convertRangesToSQL(ranges []map[string]map[string]interface{}) (where []str
 		var conditions []string
 		for key, comparison := range rangeItem {
 			for op, value := range comparison {
-				var condn string
-				switch value.(type) {
-				case int, int8, int16, int32, int64, float32, float64:
-					condn = fmt.Sprintf("(data->>'%s')::float %s ?", key, sqlComparisonOp(op))
-				default:
-					condn = fmt.Sprintf("data->>'%s' %s ?", key, sqlComparisonOp(op))
-				}
+				condn, arguments := getSQLConditionAndArgsFromRange(key, op, value)
 				conditions = append(conditions, condn)
-				args = append(args, value)
+				for _, arg := range arguments {
+					if arg != nil {
+						args = append(args, arg)
+					}
+				}
 			}
 		}
 		where = append(where, "("+strings.Join(conditions, " AND ")+")")
+	}
+	return
+}
+
+func getSQLConditionAndArgsFromRange(key string, op string, value interface{}) (condition string, args []interface{}) {
+	getConditionAndArgs := func(key string, op string, val interface{}) (condn string, arg interface{}) {
+		switch val.(type) {
+		case int, int8, int16, int32, int64, float32, float64:
+			condn = fmt.Sprintf("(data->>'%s')::float %s ?", key, sqlComparisonOp(op))
+			arg = val
+		case nil:
+			condn = fmt.Sprintf("data->>'%s' %s null", key, sqlComparisonOp(op))
+			arg = nil
+		default:
+			condn = fmt.Sprintf("data->>'%s' %s ?", key, sqlComparisonOp(op))
+			arg = val
+		}
+		return
+	}
+
+	switch op {
+	case "in", "nin":
+		// Convert IN, NOT IN condition to OR of EQ and NE conditions
+		var opnew string
+		if op == "in" {
+			opnew = "eq"
+		} else if op == "nin" {
+			opnew = "ne"
+		}
+		values, _ := value.([]interface{})
+		for i, val := range values {
+			c, arg := getConditionAndArgs(key, opnew, val)
+			args = append(args, arg)
+			if i == 0 {
+				condition = c
+			} else {
+				condition = condition + " OR " + c
+			}
+		}
+	default:
+		c, arg := getConditionAndArgs(key, op, value)
+		condition = c
+		args = append(args, arg)
 	}
 	return
 }

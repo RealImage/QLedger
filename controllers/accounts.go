@@ -22,7 +22,6 @@ func GetAccounts(w http.ResponseWriter, r *http.Request, context *ledgerContext.
 	}
 	defer r.Body.Close()
 	query := string(body)
-	log.Println("Query:", query)
 
 	engine, aerr := models.NewSearchEngine(context.DB, models.SearchNamespaceAccounts)
 	if aerr != nil {
