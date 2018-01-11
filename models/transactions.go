@@ -7,6 +7,7 @@ import (
 	"time"
 
 	ledgerError "github.com/RealImage/QLedger/errors"
+	"github.com/lib/pq"
 	"github.com/pkg/errors"
 )
 
@@ -132,6 +133,15 @@ func (t *TransactionDB) Transact(txn *Transaction) bool {
 
 	_, err = tx.Exec("INSERT INTO transactions (id, timestamp, data) VALUES ($1, $2, $3)", txn.ID, txn.Timestamp, transactionData)
 	if err != nil {
+		// Ignore duplicate transactions and return success response
+		if err.(*pq.Error).Code.Name() == "unique_violation" {
+			log.Println("Ignoring duplicate transaction of id:", txn.ID)
+			err = tx.Rollback()
+			if err != nil {
+				log.Println("Error rolling back transaction:", err)
+			}
+			return true
+		}
 		return handleTransactionError(tx, errors.Wrap(err, "insert transaction failed"))
 	}
 

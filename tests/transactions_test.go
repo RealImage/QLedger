@@ -93,8 +93,8 @@ func RunCSVTests(accountsEndpoint string, transactionsEndpoint string, filename 
 				localwg.Done()
 			}()
 			localwg.Wait()
-			if status1 == http.StatusCreated && status2 == http.StatusCreated {
-				log.Fatalf("Parallel repeated transactions with same ID %v are accepted", t["id"])
+			if (status1 != http.StatusCreated && status1 != http.StatusAccepted) || (status2 != http.StatusCreated && status2 != http.StatusAccepted) {
+				log.Fatalf("Parallel repeated transactions with same ID %v are not accepted", t["id"])
 			} else if status1 >= 400 && status2 >= 400 {
 				log.Fatalf("Both parallel repeated transactions with same ID %v are failed", t["id"])
 			}

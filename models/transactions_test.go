@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"log"
 	"os"
+	"sync"
 	"testing"
 
 	_ "github.com/lib/pq"
@@ -168,9 +169,40 @@ func (ts *TransactionsModelSuite) TestTransact() {
 	exists, err := transactionDB.IsExists("t003")
 	assert.Equal(t, err, nil, "Error while checking for existing transaction")
 	assert.Equal(t, exists, true, "Transaction should exist")
+}
 
-	done = transactionDB.Transact(transaction)
-	assert.Equal(t, done, false, "Transaction should not be created")
+func (ts *TransactionsModelSuite) TestDuplicateTransactions() {
+	t := ts.T()
+
+	transactionDB := NewTransactionDB(ts.db)
+	transaction := &Transaction{
+		ID: "t005",
+		Lines: []*TransactionLine{
+			&TransactionLine{
+				AccountID: "a1",
+				Delta:     100,
+			},
+			&TransactionLine{
+				AccountID: "a2",
+				Delta:     -100,
+			},
+		},
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(5)
+	for i := 1; i <= 5; i++ {
+		go func(txn *Transaction) {
+			done := transactionDB.Transact(transaction)
+			assert.Equal(t, done, true, "Transaction creation should be success")
+			wg.Done()
+		}(transaction)
+	}
+	wg.Wait()
+
+	exists, err := transactionDB.IsExists("t005")
+	assert.Equal(t, err, nil, "Error while checking for existing transaction")
+	assert.Equal(t, exists, true, "Transaction should exist")
 }
 
 func (ts *TransactionsModelSuite) TestTransactWithBoundaryValues() {
