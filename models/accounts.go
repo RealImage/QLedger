@@ -40,6 +40,25 @@ func (a *AccountDB) GetByID(id string) (*Account, ledgerError.ApplicationError) 
 	return account, nil
 }
 
+// GetBalanceOnTime returns the balance of the account as on given time.
+func (a *AccountDB) GetBalanceOnTime(accountID string, timestamp string) (*Account, ledgerError.ApplicationError) {
+	account := &Account{ID: accountID}
+
+	query := `SELECT COALESCE(sum(lines.delta), 0) AS balance
+				FROM lines LEFT OUTER JOIN transactions ON (transactions.id = lines.transaction_id)
+				WHERE lines.account_id = $1 AND transactions.timestamp <= $2
+				GROUP  BY lines.account_id`
+	err := a.db.QueryRow(query, &accountID, &timestamp).Scan(&account.Balance)
+	switch {
+	case err == sql.ErrNoRows:
+		account.Balance = 0
+	case err != nil:
+		return nil, DBError(err)
+	}
+
+	return account, nil
+}
+
 // IsExists says whether an account exists or not
 func (a *AccountDB) IsExists(id string) (bool, ledgerError.ApplicationError) {
 	var exists bool

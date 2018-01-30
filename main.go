@@ -69,6 +69,11 @@ func main() {
 		middlewares.TokenAuthMiddleware(
 			middlewares.ContextMiddleware(controllers.UpdateTransaction, appContext)))
 
+	// Balance as on a datetime API
+	router.HandlerFunc(http.MethodPost, hostPrefix+"/v1/balance",
+		middlewares.TokenAuthMiddleware(
+			middlewares.ContextMiddleware(controllers.GetBalanceOnTime, appContext)))
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "7000"
