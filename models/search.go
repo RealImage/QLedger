@@ -118,9 +118,10 @@ type QueryContainer struct {
 
 // SearchRawQuery represents the format of search query
 type SearchRawQuery struct {
-	Offset int `json:"from,omitempty"`
-	Limit  int `json:"size,omitempty"`
-	Query  struct {
+	Offset   int    `json:"from,omitempty"`
+	Limit    int    `json:"size,omitempty"`
+	SortTime string `json:"sort_time,omitempty"`
+	Query    struct {
 		MustClause   QueryContainer `json:"must"`
 		ShouldClause QueryContainer `json:"should"`
 	} `json:"query"`
@@ -257,7 +258,11 @@ func (rawQuery *SearchRawQuery) ToSQLQuery(namespace string) *SearchSQLQuery {
 	}
 
 	if namespace == "transactions" {
-		q = q + " ORDER BY timestamp"
+		if rawQuery.SortTime == "desc" {
+			q = q + " ORDER BY timestamp DESC"
+		} else {
+			q = q + " ORDER BY timestamp"
+		}
 	}
 
 	if offset > 0 {
