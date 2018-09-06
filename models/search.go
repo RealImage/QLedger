@@ -189,9 +189,9 @@ func (rawQuery *SearchRawQuery) ToSQLQuery(namespace string) *SearchSQLQuery {
 	var args []interface{}
 
 	switch namespace {
-	case "accounts":
+	case SearchNamespaceAccounts:
 		q = "SELECT id, balance, data FROM current_balances"
-	case "transactions":
+	case SearchNamespaceTransactions:
 		q = `SELECT id, timestamp, data,
 					array_to_json(ARRAY(
 						SELECT lines.account_id FROM lines
@@ -245,31 +245,31 @@ func (rawQuery *SearchRawQuery) ToSQLQuery(namespace string) *SearchSQLQuery {
 		return &SearchSQLQuery{sql: q, args: args}
 	}
 
-	q = q + " WHERE "
+	q += " WHERE "
 	if len(mustWhere) != 0 {
-		q = q + "(" + strings.Join(mustWhere, " AND ") + ")"
+		q += "(" + strings.Join(mustWhere, " AND ") + ")"
 		if len(shouldWhere) != 0 {
-			q = q + " AND "
+			q += " AND "
 		}
 	}
 
 	if len(shouldWhere) != 0 {
-		q = q + "(" + strings.Join(shouldWhere, " OR ") + ")"
+		q += "(" + strings.Join(shouldWhere, " OR ") + ")"
 	}
 
-	if namespace == "transactions" {
+	if namespace == SearchNamespaceTransactions {
 		if rawQuery.SortTime == "desc" {
-			q = q + " ORDER BY timestamp DESC"
+			q += " ORDER BY timestamp DESC"
 		} else {
-			q = q + " ORDER BY timestamp"
+			q += " ORDER BY timestamp"
 		}
 	}
 
 	if offset > 0 {
-		q = q + " OFFSET " + strconv.Itoa(offset) + " "
+		q += " OFFSET " + strconv.Itoa(offset) + " "
 	}
 	if limit > 0 {
-		q = q + " LIMIT " + strconv.Itoa(limit)
+		q += " LIMIT " + strconv.Itoa(limit)
 	}
 
 	q = enumerateSQLPlacholder(q)
