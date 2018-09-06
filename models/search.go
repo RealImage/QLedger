@@ -16,6 +16,10 @@ var (
 	SearchNamespaceAccounts = "accounts"
 	// SearchNamespaceTransactions holds search namespace of transactions
 	SearchNamespaceTransactions = "transactions"
+	// SortDescByTime option sorts search items in descending order of time
+	SortDescByTime = "desc"
+	// SortAscByTime option sorts search items in ascending order of time
+	SortAscByTime = "asc"
 )
 
 // SearchEngine is the interface for all search operations
@@ -258,7 +262,7 @@ func (rawQuery *SearchRawQuery) ToSQLQuery(namespace string) *SearchSQLQuery {
 	}
 
 	if namespace == SearchNamespaceTransactions {
-		if rawQuery.SortTime == "desc" {
+		if rawQuery.SortTime == SortDescByTime {
 			q += " ORDER BY timestamp DESC"
 		} else {
 			q += " ORDER BY timestamp"
