@@ -16,6 +16,10 @@ var (
 	SearchNamespaceAccounts = "accounts"
 	// SearchNamespaceTransactions holds search namespace of transactions
 	SearchNamespaceTransactions = "transactions"
+	// SortDescByTime option sorts search items in descending order of time
+	SortDescByTime = "desc"
+	// SortAscByTime option sorts search items in ascending order of time
+	SortAscByTime = "asc"
 )
 
 // SearchEngine is the interface for all search operations
@@ -118,9 +122,10 @@ type QueryContainer struct {
 
 // SearchRawQuery represents the format of search query
 type SearchRawQuery struct {
-	Offset int `json:"from,omitempty"`
-	Limit  int `json:"size,omitempty"`
-	Query  struct {
+	Offset   int    `json:"from,omitempty"`
+	Limit    int    `json:"size,omitempty"`
+	SortTime string `json:"sort_time,omitempty"`
+	Query    struct {
 		MustClause   QueryContainer `json:"must"`
 		ShouldClause QueryContainer `json:"should"`
 	} `json:"query"`
@@ -188,9 +193,9 @@ func (rawQuery *SearchRawQuery) ToSQLQuery(namespace string) *SearchSQLQuery {
 	var args []interface{}
 
 	switch namespace {
-	case "accounts":
+	case SearchNamespaceAccounts:
 		q = "SELECT id, balance, data FROM current_balances"
-	case "transactions":
+	case SearchNamespaceTransactions:
 		q = `SELECT id, timestamp, data,
 					array_to_json(ARRAY(
 						SELECT lines.account_id FROM lines
@@ -244,27 +249,31 @@ func (rawQuery *SearchRawQuery) ToSQLQuery(namespace string) *SearchSQLQuery {
 		return &SearchSQLQuery{sql: q, args: args}
 	}
 
-	q = q + " WHERE "
+	q += " WHERE "
 	if len(mustWhere) != 0 {
-		q = q + "(" + strings.Join(mustWhere, " AND ") + ")"
+		q += "(" + strings.Join(mustWhere, " AND ") + ")"
 		if len(shouldWhere) != 0 {
-			q = q + " AND "
+			q += " AND "
 		}
 	}
 
 	if len(shouldWhere) != 0 {
-		q = q + "(" + strings.Join(shouldWhere, " OR ") + ")"
+		q += "(" + strings.Join(shouldWhere, " OR ") + ")"
 	}
 
-	if namespace == "transactions" {
-		q = q + " ORDER BY timestamp"
+	if namespace == SearchNamespaceTransactions {
+		if rawQuery.SortTime == SortDescByTime {
+			q += " ORDER BY timestamp DESC"
+		} else {
+			q += " ORDER BY timestamp"
+		}
 	}
 
 	if offset > 0 {
-		q = q + " OFFSET " + strconv.Itoa(offset) + " "
+		q += " OFFSET " + strconv.Itoa(offset) + " "
 	}
 	if limit > 0 {
-		q = q + " LIMIT " + strconv.Itoa(limit)
+		q += " LIMIT " + strconv.Itoa(limit)
 	}
 
 	q = enumerateSQLPlacholder(q)
