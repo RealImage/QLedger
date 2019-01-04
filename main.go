@@ -20,7 +20,7 @@ func main() {
 	// Assert authentication
 	authToken, ok := os.LookupEnv("LEDGER_AUTH_TOKEN")
 	if !ok || authToken == "" {
-		log.Fatal("Cannot start the server. Authentication token is not set!!")
+		log.Fatal("Cannot start the server. Authentication token is not set!! Please set LEDGER_AUTH_TOKEN")
 	}
 
 	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
