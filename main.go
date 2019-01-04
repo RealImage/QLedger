@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+	"strings"
 	"os"
 
 	ledgerContext "github.com/RealImage/QLedger/context"
@@ -35,37 +36,42 @@ func main() {
 	appContext := &ledgerContext.AppContext{DB: db}
 	router := httprouter.New()
 
-	hostPrefix := os.Getenv("HOST_PREFIX")
+	// determine our routing structure
+	hostPrefix := strings.TrimSuffix(os.Getenv("HOST_PREFIX"), "/")
+	if hostPrefix == "" {
+		hostPrefix = "/v1"
+	}
+
 	// Monitors
 	router.HandlerFunc(http.MethodGet, hostPrefix+"/ping", controllers.Ping)
 
 	// Create accounts and transactions
-	router.HandlerFunc(http.MethodPost, hostPrefix+"/v1/accounts",
+	router.HandlerFunc(http.MethodPost, hostPrefix+"/accounts",
 		middlewares.TokenAuthMiddleware(
 			middlewares.ContextMiddleware(controllers.AddAccount, appContext)))
-	router.HandlerFunc(http.MethodPost, hostPrefix+"/v1/transactions",
+	router.HandlerFunc(http.MethodPost, hostPrefix+"/transactions",
 		middlewares.TokenAuthMiddleware(
 			middlewares.ContextMiddleware(controllers.MakeTransaction, appContext)))
 
 	// Read or search accounts and transactions
-	router.HandlerFunc(http.MethodGet, hostPrefix+"/v1/accounts",
+	router.HandlerFunc(http.MethodGet, hostPrefix+"/accounts",
 		middlewares.TokenAuthMiddleware(
 			middlewares.ContextMiddleware(controllers.GetAccounts, appContext)))
-	router.HandlerFunc(http.MethodPost, hostPrefix+"/v1/accounts/_search",
+	router.HandlerFunc(http.MethodPost, hostPrefix+"/accounts/_search",
 		middlewares.TokenAuthMiddleware(
 			middlewares.ContextMiddleware(controllers.GetAccounts, appContext)))
-	router.HandlerFunc(http.MethodGet, hostPrefix+"/v1/transactions",
+	router.HandlerFunc(http.MethodGet, hostPrefix+"/transactions",
 		middlewares.TokenAuthMiddleware(
 			middlewares.ContextMiddleware(controllers.GetTransactions, appContext)))
-	router.HandlerFunc(http.MethodPost, hostPrefix+"/v1/transactions/_search",
+	router.HandlerFunc(http.MethodPost, hostPrefix+"/transactions/_search",
 		middlewares.TokenAuthMiddleware(
 			middlewares.ContextMiddleware(controllers.GetTransactions, appContext)))
 
 	// Update data of accounts and transactions
-	router.HandlerFunc(http.MethodPut, hostPrefix+"/v1/accounts",
+	router.HandlerFunc(http.MethodPut, hostPrefix+"/accounts",
 		middlewares.TokenAuthMiddleware(
 			middlewares.ContextMiddleware(controllers.UpdateAccount, appContext)))
-	router.HandlerFunc(http.MethodPut, hostPrefix+"/v1/transactions",
+	router.HandlerFunc(http.MethodPut, hostPrefix+"/transactions",
 		middlewares.TokenAuthMiddleware(
 			middlewares.ContextMiddleware(controllers.UpdateTransaction, appContext)))
 
