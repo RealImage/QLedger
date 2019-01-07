@@ -21,6 +21,7 @@ func New(host string, underlying *http.Client) (*API, error) {
 
 type API struct {
 	Host, BasePath string
+	AuthToken      string
 
 	Underlying *http.Client
 }
@@ -45,4 +46,10 @@ func (a *API) Ping() error {
 	}
 
 	return nil
+}
+
+func (a *API) setAuthToken(req *http.Request) {
+	if a.AuthToken != "" {
+		req.Header.Set("Authorization", a.AuthToken)
+	}
 }

@@ -1,13 +1,17 @@
 package client
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 )
 
 var (
 	testHost, testPath = os.Getenv("TEST_HOST"), os.Getenv("TEST_PATH")
+	testAuthToken      = os.Getenv("TEST_AUTH_TOKEN")
 )
 
 func TestAPI__BasePath(t *testing.T) {
@@ -44,6 +48,15 @@ func createTestAPI(t *testing.T) *API {
 	}
 
 	return api
+}
+
+func randomID() string {
+	bs := make([]byte, 20)
+	n, err := rand.Read(bs)
+	if err != nil || n == 0 {
+		return ""
+	}
+	return strings.ToLower(hex.EncodeToString(bs))
 }
 
 func TestAPI__Ping(t *testing.T) {
