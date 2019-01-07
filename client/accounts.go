@@ -38,9 +38,13 @@ func (a *API) CreateAccount(id string, data map[string]string) error {
 }
 
 type Account struct {
-	ID       string            `json:"id"`
-	Balance  int64             `json:"balance"`
-	Metadata map[string]string `json:"data"`
+	ID      string            `json:"id"`
+	Balance int64             `json:"balance"`
+	Data    map[string]string `json:"data"`
+}
+
+func (a Account) String() string {
+	return fmt.Sprintf("Account=%q Balance=%q Metadata=%#v", a.ID, a.Balance, a.Data)
 }
 
 func (a *API) GetAccounts(body string) ([]Account, error) {
