@@ -1,0 +1,94 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qledger
+spec:
+  type: ClusterIP
+  selector:
+    app: qledger
+  ports:
+    - name: http
+      protocol: TCP
+      port: 7000
+      targetPort: 7000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qledger
+  labels:
+    app: qledger
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: qledger
+  template:
+    metadata:
+      labels:
+        app: qledger
+    spec:
+      containers:
+      - image: postgres:11
+        name: postgres
+        env:
+          - name: POSTGRES_USER
+            value: qledger
+          - name: POSTGRES_PASSWORD
+            value: password
+          - name: POSTGRES_DB
+            value: qledger
+        ports:
+          - containerPort: 5432
+            name: tcp
+            protocol: TCP
+        readinessProbe:
+          tcpSocket:
+            port: 7000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          tcpSocket:
+            port: 7000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+      - image: moov/qledger:latest
+        imagePullPolicy: Always
+        name: qledger
+        env:
+          - name: LEDGER_AUTH_TOKEN
+            value: qledger
+          - name: MIGRATION_FILES_PATH
+            value: file:///go/src/github.com/RealImage/QLedger/migrations/postgres/
+          - name: DATABASE_URL
+            value: 'postgres://qledger:password@127.0.0.1:5432/qledger?sslmode=disable'
+        ports:
+          - containerPort: 7000
+            name: http
+            protocol: TCP
+        resources:
+          limits:
+            cpu: 0.1
+            memory: 50Mi
+          requests:
+            memory: 25Mi
+        readinessProbe:
+          httpGet:
+            path: /ping
+            port: 7000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /ping
+            port: 7000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      restartPolicy: Always
+
+---
