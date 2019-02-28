@@ -24,9 +24,9 @@ jobs:
           command: go vet ./...
       - run:
           name: Test
-          command: psql qledger_db < schema.sql; go test ./... -race -p=1
+          command: psql $TEST_DATABASE_URL < schema.sql; go test ./... -race -p=1
           environment:
-            DATABASE_URL: "postgres://ci_user@localhost:5432/qledger_db?sslmode=disable"
+            TEST_DATABASE_URL: "postgres://ci_user@localhost:5432/qledger_db?sslmode=disable"
 workflows:
   version: 2
   build_and_test:
