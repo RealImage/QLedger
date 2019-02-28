@@ -11,6 +11,9 @@ jobs:
     steps:
       - checkout
       - run:
+          name: "Install Dependencies"
+          command: sudo apt-get install postgresql-client
+      - run:
           name: Build
           command: go build
       - run:
