@@ -1,0 +1,34 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/golang:1.11
+      - image: circleci/postgres:10
+        environment:
+        - POSTGRES_USER=ci_user
+        - POSTGRES_DB=qledger_db
+    working_directory: /go/src/github.com/RealImage/QLedger
+    steps:
+      - checkout
+      - run:
+          name: "Install Dependencies"
+          command: sudo apt-get install postgresql-client
+      - run:
+          name: Build
+          command: go build
+      - run:
+          name: "Enforce Go Formatted Code" # https://circleci.com/blog/enforce-build-standards/#enforce-code-formatting
+          command: "! go fmt ./... 2>&1 | read"
+      - run:
+          name: "Identify Vet Errors"
+          command: go vet ./...
+      - run:
+          name: Test
+          command: psql $TEST_DATABASE_URL < schema.sql; go test ./... -race -p=1
+          environment:
+            TEST_DATABASE_URL: "postgres://ci_user@localhost:5432/qledger_db?sslmode=disable"
+workflows:
+  version: 2
+  build_and_test:
+    jobs:
+      - build
