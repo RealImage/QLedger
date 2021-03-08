@@ -24,6 +24,8 @@ func main() {
 	}
 
 	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
+	db.SetMaxOpenConns(30)
+	db.SetMaxIdleConns(0)
 	if err != nil {
 		log.Panic("Unable to connect to Database:", err)
 	}
