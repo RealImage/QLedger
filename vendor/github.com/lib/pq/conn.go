@@ -3,6 +3,7 @@ package pq
 import (
 	"bufio"
 	"crypto/md5"
+	"crypto/sha256"
 	"database/sql"
 	"database/sql/driver"
 	"encoding/binary"
@@ -1180,7 +1181,7 @@ func (cn *conn) auth(r *readBuf, o values) {
 		if sc.Err() != nil {
 			errorf("SCRAM-SHA-256 error: %s", sc.Err().Error())
 		}
-		
+
 	default:
 		errorf("R -unknown authentication response: %d", code)
 	}
