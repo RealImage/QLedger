@@ -1133,7 +1133,7 @@ func (cn *conn) auth(r *readBuf, o values) {
 			errorf("unexpected authentication response: %q", t)
 		}
 	default:
-		errorf("unknown authentication response: %d", code)
+		errorf("R -unknown authentication response: %d", code)
 	}
 }
 
@@ -1407,7 +1407,7 @@ func (rs *rows) Next(dest []driver.Value) (err error) {
 			rs.colNames, rs.colFmts, rs.colTyps = parsePortalRowDescribe(&rs.rb)
 			return io.EOF
 		default:
-			errorf("R - unexpected message after execute: %q", t)
+			errorf("unexpected message after execute: %q", t)
 		}
 	}
 }
