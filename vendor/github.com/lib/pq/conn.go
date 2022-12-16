@@ -21,6 +21,7 @@ import (
 	"unicode"
 
 	"github.com/lib/pq/oid"
+	"github.com/lib/pq/scram"
 )
 
 // Common error types
