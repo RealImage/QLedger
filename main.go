@@ -98,7 +98,7 @@ func migrateDB(db *sql.DB) {
 		migrationFilesPath,
 		"postgres", driver)
 	if err != nil {
-		log.Panic("Unable to create Migrate instance for database:", err)
+		log.Panic("R - Unable to create Migrate instance for database:", err)
 	}
 
 	version, dirty, err := m.Version()
