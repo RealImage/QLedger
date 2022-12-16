@@ -1407,7 +1407,7 @@ func (rs *rows) Next(dest []driver.Value) (err error) {
 			rs.colNames, rs.colFmts, rs.colTyps = parsePortalRowDescribe(&rs.rb)
 			return io.EOF
 		default:
-			errorf("unexpected message after execute: %q", t)
+			errorf("R - unexpected message after execute: %q", t)
 		}
 	}
 }
