@@ -1,0 +1,118 @@
+name: Auto deployment - Staging
+
+on: 
+ pull_request:
+    branches:
+      - jupiter
+    types: [closed]
+
+jobs:
+  auto-deploy:
+
+    if: github.event.pull_request.merged == true
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - run: env
+      - name: Notify about deployment started for Qledger
+        run: |
+           cat << EOF > message.json
+           {"@type":"MessageCard","@context":"https://schema.org/extensions","summary":"Deployment Started!","themeColor":"0076D7","title":"$GITHUB_REPOSITORY pipeline Started!","sections":[{"facts":[{"name":"Repository:","value":"$GITHUB_REPOSITORY"},{"name":"Branch:","value":"$GITHUB_REF_NAME"},{"name":"Commit:","value":"$GITHUB_SHA"},{"name":"Triggered By:","value":"$GITHUB_ACTOR"}]}],"potentialAction":[{"@type":"OpenUri","name":"View on GitHub","targets":[{"os":"default","uri":"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"}]}]}
+           EOF
+           curl -X POST ${{ secrets.QW_STAGING_TEAMS_NOTIFICATION }} --header 'Content-Type: application/json' -d @message.json
+
+      - uses: actions/checkout@v3
+      - name: Configure AWS credentials with region
+        uses: aws-actions/configure-aws-credentials@v1-node16
+        with:
+          aws-access-key-id: ${{ secrets.QW_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.QW_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Downloading the S3 configuration for Qledger
+        run: |
+          aws s3 cp --region us-east-1 s3://qubewire-deployment/jupiter-staging/qw-qledger-api-jupiter-staging.json qw-qledger-api-jupiter-staging.json.json
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1.5.3
+
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: qw-qledger-api-jupiter-staging
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Update Lambda Service Env Variables and Latest ECR Image
+        id: lambda-deployment
+        env:
+          AWS_REGION: us-east-1
+          LAMBDA_FUNCTION_NAME: Update-Lambda-Service-Jupiter-Staging
+          TARGET_LAMBDA_FUNCTION_NAME: qw-qledger-api-jupiter-staging
+          ECR_IMAGE_URI: ${{ steps.build-image.outputs.image }}
+          S3_URI: s3://qubewire-deployment/jupiter-staging/qw-qledger-api-jupiter-staging.json
+        run: |
+          aws lambda invoke --region ${AWS_REGION} --invocation-type RequestResponse --cli-binary-format raw-in-base64-out --function-name ${LAMBDA_FUNCTION_NAME} --payload '{ "lambda_function_name": "'"${TARGET_LAMBDA_FUNCTION_NAME}"'", "ecr_image_uri": "'"${ECR_IMAGE_URI}"'", "s3_uri": "'"${S3_URI}"'" }' outputfile.txt
+          cat outputfile.txt
+          STATUS_CODE=$(grep -o '"statusCode": [0-9]*' outputfile.txt | cut -d' ' -f2)
+          
+          echo "StatusCode: ${STATUS_CODE}"
+          
+          if [[ $STATUS_CODE == 200 ]]
+          
+          then
+            echo "Lambda function, ${LAMBDA_FUNCTION_NAME}. Executed successfully"
+            echo "lambda_success=true" >> $GITHUB_ENV
+          else
+            echo "Lambda Function, ${LAMBDA_FUNCTION_NAME}, failed during execution with STATUS_CODE, ${STATUS_CODE}."
+            echo "lambda_failure=true" >> $GITHUB_ENV
+            exit 1
+          
+          fi
+
+      - name: Notify about Lambda Deployment Failure
+        if: ${{ failure() && env.lambda_failure == 'true' }}
+        run: |
+           cat << EOF > message.json
+           {"@type":"MessageCard","@context":"https://schema.org/extensions","summary":"Lambda Deployment Failed!","themeColor":"ff0000","title":"$GITHUB_REPOSITORY Lambda deployment failed 💢!","sections":[{"facts":[{"name":"Repository:","value":"$GITHUB_REPOSITORY"},{"name":"Branch:","value":"$GITHUB_REF_NAME"},{"name":"Commit:","value":"$GITHUB_SHA"},{"name":"Triggered By:","value":"$GITHUB_ACTOR"}]}],"potentialAction":[{"@type":"OpenUri","name":"View on GitHub","targets":[{"os":"default","uri":"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"}]}]}
+           EOF
+           curl -X POST ${{ secrets.QW_STAGING_TEAMS_NOTIFICATION }} --header 'Content-Type: application/json' -d @message.json
+
+      - name: Fill in the new image ID in the Amazon ECS task definition for Qledger
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1.1.3
+        with:
+          task-definition: qw-qledger-api-jupiter-staging.json
+          container-name: qw-qledger-api-jupiter-staging
+          image: ${{ steps.build-image.outputs.image }}
+
+      - name: Deploy Amazon ECS task definition for Qledger
+        id: ecs-deployment
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1.4.11
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: qw-qledger-api-jupiter-staging-service-FG
+          cluster: QW-Jupiter-Staging
+          wait-for-service-stability: true
+
+      - name: Notify About ECS Deployment Failure
+        if: ${{ failure() && steps.ecs-deployment.outcome == 'failure' }}
+        run: |
+           cat << EOF > message.json
+           {"@type":"MessageCard","@context":"https://schema.org/extensions","summary":"ECS Deployment Failed!","themeColor":"ff0000","title":"$GITHUB_REPOSITORY deployment failed 💢!","sections":[{"facts":[{"name":"Repository:","value":"$GITHUB_REPOSITORY"},{"name":"Branch:","value":"$GITHUB_REF_NAME"},{"name":"Commit:","value":"$GITHUB_SHA"},{"name":"Triggered By:","value":"$GITHUB_ACTOR"}]}],"potentialAction":[{"@type":"OpenUri","name":"View on GitHub","targets":[{"os":"default","uri":"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"}]}]}
+           EOF
+           curl -X POST ${{ secrets.QW_STAGING_TEAMS_NOTIFICATION }} --header 'Content-Type: application/json' -d @message.json
+
+      - name: Notify about deployment Completed
+        if: ${{ success() && env.lambda_success == 'true' && steps.ecs-deployment.outcome == 'success' }}
+        run: |
+           cat << EOF > message.json
+           {"@type":"MessageCard","@context":"https://schema.org/extensions","summary":"ECS & Lambda Deployment Completed!","themeColor":"00FF00","title":"$GITHUB_REPOSITORY deployment success ✅ !","sections":[{"facts":[{"name":"Repository:","value":"$GITHUB_REPOSITORY"},{"name":"Branch:","value":"$GITHUB_REF_NAME"},{"name":"Commit:","value":"$GITHUB_SHA"},{"name":"Triggered By:","value":"$GITHUB_ACTOR"}]}],"potentialAction":[{"@type":"OpenUri","name":"View on GitHub","targets":[{"os":"default","uri":"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"}]}]}
+           EOF
+           curl -X POST ${{ secrets.QW_STAGING_TEAMS_NOTIFICATION }} --header 'Content-Type: application/json' -d @message.json
