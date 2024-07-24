@@ -2,6 +2,9 @@
 # and a workspace (GOPATH) configured at /go.
 FROM golang:1.11
 
+# copy Lambda Web Adapter binary to /opt/extensions
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.8.3 /lambda-adapter /opt/extensions/lambda-adapter
+
 # Copy the local package files to the container's workspace.
 ADD . /go/src/github.com/RealImage/QLedger
 
